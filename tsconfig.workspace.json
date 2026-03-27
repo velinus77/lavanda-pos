@@ -1,18 +1,18 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@lavanda/db": ["../../packages/db/src"],
-      "@lavanda/db/*": ["../../packages/db/src/*"],
-      "@lavanda/shared": ["../../packages/shared/src"],
-      "@lavanda/shared/*": ["../../packages/shared/src/*"],
-      "@lavanda/business": ["../../packages/business/src"],
-      "@lavanda/business/*": ["../../packages/business/src/*"],
-      "@lavanda/ui": ["../../packages/ui/src"],
-      "@lavanda/ui/*": ["../../packages/ui/src/*"],
-      "@lavanda/i18n": ["../../packages/i18n/src"],
-      "@lavanda/i18n/*": ["../../packages/i18n/src/*"]
+      "@lavanda-pos/db": ["./packages/db/src"],
+      "@lavanda-pos/db/*": ["./packages/db/src/*"],
+      "@lavanda-pos/shared": ["./packages/shared/src"],
+      "@lavanda-pos/shared/*": ["./packages/shared/src/*"],
+      "@lavanda-pos/business": ["./packages/business/src"],
+      "@lavanda-pos/business/*": ["./packages/business/src/*"],
+      "@lavanda-pos/ui": ["./packages/ui/src"],
+      "@lavanda-pos/ui/*": ["./packages/ui/src/*"],
+      "@lavanda-pos/i18n": ["./packages/i18n/src"],
+      "@lavanda-pos/i18n/*": ["./packages/i18n/src/*"]
     }
   }
 }
