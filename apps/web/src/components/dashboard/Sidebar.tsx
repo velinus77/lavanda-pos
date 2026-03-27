@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { User } from '@/lib/auth';
+import { useLocale } from '@/contexts/LocaleProvider';
 
 interface SidebarProps {
   user: User;
@@ -37,7 +38,7 @@ const navItems: NavItem[] = [
     labelAr: 'نقطة البيع',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 36v-3m-3 3h.01M9 17h.01M9 21h5a1 1 0 001-1V3a1 1 0 00-1-1H9a1 1 0 00-1 1v16a1 1 0 001 1z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-4H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
       </svg>
     ),
     allowedRoles: ['admin', 'manager', 'cashier'],
@@ -124,7 +125,8 @@ const navItems: NavItem[] = [
 
 export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const isRTL = user.language === 'ar';
+  const { locale } = useLocale();
+  const isRTL = locale === 'ar';
 
   const visibleItems = navItems.filter((item) =>
     item.allowedRoles.includes(user.role)
@@ -218,4 +220,3 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
     </>
   );
 }
-

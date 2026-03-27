@@ -73,6 +73,7 @@ export default function SalesPage() {
 
   // Receipt preview
   const [previewReceiptId, setPreviewReceiptId] = useState<string | null>(null);
+  const [receiptBlobUrl, setReceiptBlobUrl] = useState<string | null>(null);
 
   // ── Auth ──
   useEffect(() => {
@@ -83,17 +84,42 @@ export default function SalesPage() {
     setIsLoading(false);
   }, [router]);
 
+  // ── Fetch receipt blob URL whenever previewReceiptId changes ──
+  useEffect(() => {
+    if (!previewReceiptId) return;
+    const token = getAuthToken();
+    if (!token) return;
+    let objectUrl: string;
+    fetch(`${API_BASE}/pos/receipt/${previewReceiptId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.blob())
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setReceiptBlobUrl(objectUrl);
+      });
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setReceiptBlobUrl(null);
+    };
+  }, [previewReceiptId]);
+
   // ── Fetch sales ──
-  const loadSales = useCallback(async (currentPage: number) => {
+  const loadSales = useCallback(async (
+    pageNum: number = page,
+    overrides?: { dateFrom?: string; dateTo?: string }
+  ) => {
     setIsFetching(true);
     setFetchError(null);
     try {
       const token = getAuthToken() ?? '';
+      const effectiveDateFrom = overrides?.dateFrom !== undefined ? overrides.dateFrom : dateFrom;
+      const effectiveDateTo = overrides?.dateTo !== undefined ? overrides.dateTo : dateTo;
       const data = await fetchSales(token, {
-        page: currentPage,
+        page: pageNum,
         limit,
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
+        date_from: effectiveDateFrom || undefined,
+        date_to: effectiveDateTo || undefined,
       });
       setSales(data.sales ?? []);
       setTotal(data.total ?? 0);
@@ -102,7 +128,7 @@ export default function SalesPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [dateFrom, dateTo, isRTL]);
+  }, [dateFrom, dateTo, isRTL, page]);
 
   useEffect(() => {
     if (!isLoading) loadSales(page);
@@ -117,7 +143,7 @@ export default function SalesPage() {
     setDateFrom('');
     setDateTo('');
     setPage(1);
-    loadSales(1);
+    loadSales(1, { dateFrom: '', dateTo: '' });
   };
 
   const totalPages = Math.ceil(total / limit);
@@ -338,8 +364,8 @@ export default function SalesPage() {
             </div>
             <div className="p-2" style={{ height: '500px' }}>
               <iframe
-                src={`${API_BASE}/pos/receipt/${previewReceiptId}`}
-                className="w-full h-full border-0 rounded-lg"
+                src={receiptBlobUrl ?? undefined}
+                className="w-full h-96 border rounded"
                 title="Receipt Preview"
               />
             </div>
@@ -352,8 +378,7 @@ export default function SalesPage() {
               </button>
               <button
                 onClick={() => {
-                  const win = window.open(`${API_BASE}/pos/receipt/${previewReceiptId}`, '_blank', 'width=400,height=600');
-                  win?.addEventListener('load', () => win.print());
+                  if (receiptBlobUrl) window.open(receiptBlobUrl, '_blank', 'width=400,height=600');
                 }}
                 className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
               >

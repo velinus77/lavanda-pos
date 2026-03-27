@@ -279,13 +279,19 @@ export default function POSPage() {
               {t.receiptNo}: <span className="font-mono font-semibold text-gray-900 dark:text-white">{receipt.sale.receiptNumber}</span>
             </p>
             <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 mb-6 text-left rtl:text-right">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-500">{t.amountPaid}</span>
-                <span className="font-bold text-gray-900 dark:text-white">
-                  {receipt.sale.totalAmount.toFixed(2)} EGP
-                </span>
+              <div className="flex justify-between text-sm">
+                <span>{isRTL ? 'المجموع الفرعي' : 'Subtotal'}</span>
+                <span>{receipt.sale.subtotalAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
+                <span>{isRTL ? 'ضريبة القيمة المضافة' : 'VAT'}</span>
+                <span>{receipt.sale.taxAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-bold border-t pt-2 mt-2">
+                <span>{isRTL ? 'الإجمالي' : 'Total'}</span>
+                <span>{receipt.sale.totalAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-2">
                 <span className="text-gray-500">{isRTL ? 'عدد الأصناف' : 'Items'}</span>
                 <span className="text-gray-700 dark:text-gray-300">{receipt.items.length}</span>
               </div>
@@ -329,6 +335,16 @@ export default function POSPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (searchResults.length > 0) {
+                    addToCart(searchResults[0]);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }
+                }
+              }}
               placeholder={t.searchPlaceholder}
               autoFocus
               className="w-full pl-10 rtl:pl-4 rtl:pr-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
@@ -383,7 +399,7 @@ export default function POSPage() {
         </div>
 
         {/* Right: Cart */}
-        <div className="flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden max-h-[calc(100vh-12rem)]">
           {/* Cart header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -405,7 +421,7 @@ export default function POSPage() {
           </div>
 
           {/* Cart items */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                 <svg className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
