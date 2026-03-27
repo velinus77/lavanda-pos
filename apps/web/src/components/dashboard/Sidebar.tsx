@@ -144,11 +144,11 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
   );
 
   const sidebarClasses = `
-    fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700
+    fixed inset-y-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700
     transform transition-transform duration-300 ease-in-out
     lg:translate-x-0 lg:static lg:inset-0
-    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-    ${isRTL ? 'left-auto right-0 lg:right-0' : ''}
+    ${isRTL ? 'right-0' : 'left-0'}
+    ${isOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'}
   `;
 
   return (

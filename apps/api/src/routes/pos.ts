@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { requireAuth, requireRole } from '../plugins/auth.js';
+import type { TokenPayload } from '../services/auth.service.js';
 import { z } from 'zod';
 import {
   checkoutSchema,
@@ -45,8 +46,7 @@ export const posRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
     async (request, reply) => {
       try {
         const input = checkoutSchema.parse(request.body);
-        // @ts-ignore — user is attached by requireAuth
-        const cashierId: string = request.user?.id ?? request.user?.userId;
+        const cashierId = (request.user as TokenPayload).userId;
 
         if (!cashierId) {
           return reply.code(401).send({ error: 'Unauthorized', message: 'Cashier identity not found in token' });

@@ -7,7 +7,7 @@
 
 ## Project Overview
 
-Lavanda POS is a full-stack pharmacy management system designed for small to medium pharmacies. It provides comprehensive inventory tracking, stock management with expiry monitoring, user role management, and a responsive bilingual interface.
+Lavanda POS is a full-stack pharmacy management system designed for small to medium pharmacies. It provides comprehensive inventory tracking, stock management with expiry monitoring, sales reporting, exchange rate management, user role management, and a responsive bilingual interface.
 
 ### Architecture
 
@@ -24,6 +24,22 @@ The system uses a **local-first architecture** with SQLite database, making it s
 
 ---
 
+## Features
+
+- **POS / Checkout** — Barcode scanning, cart management, receipt generation (HTML/print)
+- **Sales History** — Browse and filter completed sales transactions
+- **Inventory Management** — Product catalog, batch tracking, expiry monitoring
+- **Stock Adjustments** — Add, remove, return, dispose with full movement history
+- **Reports Page** — Sales Report, Inventory Report, and Stock Movements tabs (bilingual AR/EN)
+- **Exchange Rates API** — Manage currency exchange rates with admin/manager auth
+- **Audit Logging** — Full audit trail for auth events, user CRUD, and stock adjustments
+- **User Management** — Role-based access (Admin, Manager, Cashier) with account lockout
+- **Settings** — Pharmacy profile, currency (EGP), timezone (Africa/Cairo), tax rate
+- **Bilingual UI** — Full English/Arabic support with RTL layout switching
+- **Dark/Light Mode** — System preference detection with manual toggle
+
+---
+
 ## Tech Stack
 
 ### Backend (apps/api)
@@ -33,6 +49,8 @@ The system uses a **local-first architecture** with SQLite database, making it s
 - **Authentication:** JWT (access token: 15min, refresh token: 7 days)
 - **Password Hashing:** bcrypt (12 salt rounds)
 - **Validation:** Zod schemas
+- **Audit Logging:** File-based audit log service (writeAuditLog)
+- **Rate Limiting:** In-memory brute-force protection (5 attempts, 15min lockout)
 
 ### Frontend (apps/web)
 - **Framework:** Next.js 15 with App Router
@@ -219,6 +237,23 @@ Base URL: `http://localhost:3001/api`
 
 Adjustment types: `add`, `remove`, `return`, `dispose`
 
+### Exchange Rates
+
+| Method | Endpoint | Description | Role |
+|--------|----------|-------------|------|
+| GET | `/exchange-rates` | List all exchange rates | authenticated |
+| POST | `/exchange-rates` | Create/update exchange rate | admin, manager |
+| DELETE | `/exchange-rates/:id` | Delete exchange rate | admin |
+
+### Reports
+
+| Method | Endpoint | Description | Role |
+|--------|----------|-------------|------|
+| GET | `/reports/stats` | Dashboard KPI cards (sales, revenue, stock) | authenticated |
+| GET | `/reports/sales` | Sales report with date range filter | manager, admin |
+| GET | `/reports/inventory` | Inventory snapshot report | manager, admin |
+| GET | `/reports/stock-movements` | Stock movement history | manager, admin |
+
 ### Settings (Admin Only)
 
 | Method | Endpoint | Description | Role |
@@ -265,18 +300,21 @@ Adjustment types: `add`, `remove`, `return`, `dispose`
 
 | Route | Description | Roles |
 |-------|-------------|-------|
-| `/dashboard` | Dashboard home with stats and alerts | all |
+| `/dashboard` | Dashboard home with KPI stats and alerts | all |
+| `/dashboard/pos` | POS checkout with cart and receipt | all |
+| `/dashboard/sales` | Sales history and transaction list | all |
 | `/dashboard/products` | Product catalog with CRUD | manager, admin |
 | `/dashboard/categories` | Category management | manager, admin |
 | `/dashboard/suppliers` | Supplier management | manager, admin |
 | `/dashboard/stock` | Stock adjustments and expiry monitoring | manager, admin |
+| `/dashboard/reports` | Reports: Sales, Inventory, Stock Movements | manager, admin |
 | `/dashboard/users` | User management | admin |
 | `/dashboard/settings` | Application settings | admin |
 
 ### Key UI Components
 
 - `LoginForm` - Email/password with validation, language switch, dark mode toggle
-- `Sidebar` - Role-based navigation menu
+- `Sidebar` - Role-based navigation menu with RTL support
 - `ProductManager` - Product list with search, batch management, barcode scanner support
 - `CategoryManager` - Category CRUD with modal
 - `SupplierManager` - Supplier CRUD with modal
@@ -284,6 +322,9 @@ Adjustment types: `add`, `remove`, `return`, `dispose`
 - `StockAdjustment` - Stock adjustment form with preview
 - `ExpiryMonitor` - Two-column view: expiring soon and expired
 - `UserManager` - User table with CRUD modals
+- `ReportsPage` - Tabbed reports interface (Sales / Inventory / Stock Movements)
+- `POSCheckout` - Cart management, barcode input, receipt generation
+- `SalesHistory` - Paginated sales transaction list
 
 ---
 
@@ -292,19 +333,22 @@ Adjustment types: `add`, `remove`, `return`, `dispose`
 | Feature | Admin | Manager | Cashier |
 |---------|-------|---------|---------|
 | Dashboard View | ✓ | ✓ | ✓ |
+| POS / Checkout | ✓ | ✓ | ✓ |
+| Sales History | ✓ | ✓ | ✓ |
 | Products (CRUD) | ✓ | ✓ | ✗ |
 | Categories (CRUD) | ✓ | ✓ | ✗ |
 | Suppliers (CRUD) | ✓ | ✓ | ✗ |
 | Stock Adjustments | ✓ | ✓ | ✗ |
 | Expiry Monitoring | ✓ | ✓ | ✗ |
+| Reports | ✓ | ✓ | ✗ |
+| Exchange Rates | ✓ | ✓ | ✗ |
 | User Management | ✓ | ✗ | ✗ |
 | Settings | ✓ | ✗ | ✗ |
-| POS/Checkout | ✓ | ✓ | ✓ |
 
 **Role Hierarchy:**
 - **Admin:** Full system access
-- **Manager:** Inventory and stock management, no user/settings access
-- **Cashier:** POS operations only (checkout pending implementation)
+- **Manager:** Inventory, stock, reports, and exchange rate management; no user/settings access
+- **Cashier:** POS operations and sales history
 
 ---
 
@@ -350,6 +394,16 @@ After running `npm run db:seed`, use these credentials:
 - id, product_id, batch_id, user_id, type (add/remove/return/dispose)
 - quantity, previous_quantity, new_quantity, reason, created_at
 
+**sales / sale_items**
+- id, cashier_id, total_amount, payment_method, created_at
+- sale_id, product_id, batch_id, quantity, unit_price, subtotal
+
+**exchange_rates**
+- id, from_currency, to_currency, rate, updated_at, updated_by
+
+**receipt_prints**
+- id, sale_id, printed_at, printed_by
+
 **app_settings**
 - id, key, value, category (general/localized/financial/inventory)
 
@@ -374,6 +428,7 @@ Sample expired products are included for testing expiry alerts.
 - **JWT Tokens:** Short-lived access tokens (15min) + rotating refresh tokens (7 days)
 - **Brute Force Protection:** 5 failed login attempts locks account for 15 minutes
 - **Role-Based Access Control:** Every protected route enforces role requirements
+- **Audit Logging:** All sensitive operations (auth, user CRUD, stock adjustments) written to audit log
 - **CORS:** Configured for frontend origin only
 - **SQL Injection Prevention:** Parameterized queries via Drizzle ORM
 
@@ -424,26 +479,19 @@ npm run db:studio     # Open Drizzle Studio (GUI)
 
 ### Immediate Priorities
 
-1. **POS/Checkout Module**
-   - Shopping cart state management
-   - Barcode scanner integration
-   - Receipt generation (PDF/print)
-   - Payment processing (cash, card)
-
-2. **Sales History & Analytics**
-   - Daily/weekly/monthly sales reports
-   - Top-selling products dashboard
-   - Revenue tracking
-
-3. **Mobile Optimization**
+1. **Mobile Optimization**
    - Tablet-friendly POS interface
    - Touch-optimized controls
    - Offline-first sync strategy
 
-4. **Enhanced Inventory**
+2. **Enhanced Inventory**
    - Purchase order management
    - Automated reorder points
    - Supplier performance tracking
+
+3. **Receipt Printing**
+   - Full print service integration
+   - PDF export for receipts
 
 ### Future Enhancements
 
@@ -453,6 +501,7 @@ npm run db:studio     # Open Drizzle Studio (GUI)
 - WhatsApp/SMS notifications for low stock
 - Export reports to Excel/PDF
 - Backup and restore functionality
+- Redis-backed rate limiting for production deployments
 
 ---
 
@@ -487,6 +536,14 @@ FRONTEND_URL=http://localhost:3000
 
 ---
 
+## Known Limitations
+
+- Login rate limiting is in-memory only (resets on restart); use Redis for production
+- SQLite is used for simplicity; migrate to PostgreSQL for production workloads
+- Receipt printing is schema-ready but not yet wired to a full print service
+
+---
+
 ## Support
 
 For issues or questions, refer to the codebase documentation in each module's source files.
@@ -495,40 +552,4 @@ For issues or questions, refer to the codebase documentation in each module's so
 
 ---
 
-*Built for Lavanda Pharmacy - Hurghada, Egypt*
-
-## Local Development
-
-### Prerequisites
-- Node.js >= 20
-- npm >= 10
-
-### Setup
-```bash
-# Install dependencies
-npm install
-
-# Set up environment
-cp apps/api/.env.example apps/api/.env
-# Edit apps/api/.env with your values
-
-# Run database migration
-npm run --workspace=packages/db db:migrate
-
-# Seed initial data (admin/admin123)
-npm run --workspace=packages/db db:seed
-
-# Start development servers
-npm run dev
-```
-
-### Default Credentials
-- Username: `admin`
-- Password: `admin123`
-- **Change immediately in production**
-
-## Known Limitations
-- Login rate limiting is in-memory only (resets on restart); not suitable for production without Redis
-- POS checkout, exchange rates, reports, and sync queue endpoints are stubbed (501 Not Implemented) pending full implementation
-- Receipt printing is schema-ready but not yet fully wired to a print service
-- SQLite is used for simplicity; migrate to PostgreSQL for production workloads
+*Built for Lavanda Pharmacy - Cairo, Egypt*

@@ -14,7 +14,7 @@ interface Sale {
   cashierName?: string;
   totalAmount: number;
   taxAmount: number;
-  subtotalAmount: number;
+  subtotal: number;
   paymentMethod: string;
   createdAt: string;
   itemCount?: number;
