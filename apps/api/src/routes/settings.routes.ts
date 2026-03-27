@@ -2,8 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { requireAuth, requireRole } from '../plugins/auth.js';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { db } from '@lavanda-pos/db';
-import { appSettings } from '@lavanda-pos/db/schema';
+import { db, appSettings } from '@lavanda/db';
 
 // Validation schemas
 const updateSettingsSchema = z.object({
@@ -20,20 +19,20 @@ const DEFAULT_SETTINGS = {
   'general.timezone': 'Africa/Cairo',
   'general.currency': 'EGP',
   'general.language': 'en',
-  
+
   // Localized names
-  'localized.pharmacy_name_ar': 'صيدلية لافندا',
+  'localized.pharmacy_name_ar': '\u0635\u064a\u062f\u0644\u064a\u0629 \u0644\u0627\u0641\u0646\u062f\u0627',
   'localized.pharmacy_name_en': 'Lavanda Pharmacy',
   'localized.address_ar': '',
   'localized.address_en': '',
   'localized.phone': '',
-  
+
   // Financial settings
   'financial.tax_rate': 0.14, // 14% VAT
   'financial.default_currency': 'EGP',
   'financial.accept_foreign_currency': true,
   'financial.foreign_currencies': ['USD', 'EUR', 'GBP'],
-  
+
   // Inventory settings
   'inventory.low_stock_threshold': 10,
   'inventory.expiry_alert_days': 30,
@@ -48,7 +47,7 @@ const DEFAULT_SETTINGS = {
 async function initializeDefaultSettings(): Promise<void> {
   try {
     const existingSettings = await db.select().from(appSettings).limit(1);
-    
+
     if (existingSettings.length === 0) {
       const defaultEntries = Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
         id: crypto.randomUUID(),
@@ -59,7 +58,7 @@ async function initializeDefaultSettings(): Promise<void> {
         isPublic: true,
         updatedAt: new Date()
       }));
-      
+
       await db.insert(appSettings).values(defaultEntries);
     }
   } catch (error) {
@@ -80,53 +79,48 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       // Fetch all settings from database
       const settingsList = await db.select().from(appSettings);
-      
+
       // Group settings by category
-      const groupedSettings: Record<string, Record<string, any>> = {
+      const groupedSettings: Record<string, Record<string, unknown>> = {
         general: {},
         localized: {},
         financial: {},
         inventory: {}
       };
-      
+
       // Parse and organize settings
-      settingsList.forEach((setting) => {
-        const category = setting.category || 'general';
+      settingsList.forEach((setting: typeof appSettings.$inferSelect) => {
+        const category = setting.category ?? 'general';
         const key = setting.key;
-        
+
         try {
-          const value = JSON.parse(setting.value as string);
-          
-          // Short key (without category prefix)
+          const value: unknown = JSON.parse(setting.value as string);
           const shortKey = key.replace(`${category}.`, '');
-          
           if (groupedSettings[category]) {
             groupedSettings[category][shortKey] = value;
           }
-        } catch (parseError) {
-          // If parsing fails, store raw value
+        } catch {
           if (category in groupedSettings) {
             const shortKey = key.replace(`${category}.`, '');
             groupedSettings[category][shortKey] = setting.value;
           }
         }
       });
-      
+
       // Also return raw list for reference
-      const rawSettings = settingsList.map((setting) => ({
+      const rawSettings = settingsList.map((setting: typeof appSettings.$inferSelect) => ({
         key: setting.key,
-        value: JSON.parse(setting.value as string),
+        value: JSON.parse(setting.value as string) as unknown,
         category: setting.category,
         description: setting.description,
         updatedAt: setting.updatedAt
       }));
-      
+
       return reply.code(200).send({
         success: true,
         settings: groupedSettings,
         raw: rawSettings
       });
-
     } catch (error) {
       fastify.log.error({ err: error }, 'Get settings error');
       return reply.code(500).send({
@@ -150,29 +144,27 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
       // Validate request body
       const validatedData = updateSettingsSchema.parse(request.body);
       const { settings } = validatedData;
-      
+
       const updatePromises = Object.entries(settings).map(async ([key, value]) => {
         const category = key.split('.')[0];
-        
+
         // Validate category
-        if (!SETTING_CATEGORIES.includes(category as any)) {
+        if (!SETTING_CATEGORIES.includes(category as typeof SETTING_CATEGORIES[number])) {
           throw new Error(`Invalid category: ${category}`);
         }
-        
+
         // Update or insert setting
         const existing = await db.select().from(appSettings).where(eq(appSettings.key, key)).limit(1);
-        
+
         if (existing.length > 0) {
-          // Update existing setting
           return db.update(appSettings)
             .set({
               value: JSON.stringify(value),
               updatedAt: new Date(),
-              updatedBy: request.user?.userId?.toString() || null
+              updatedBy: request.user?.userId ?? null
             })
             .where(eq(appSettings.key, key));
         } else {
-          // Insert new setting
           return db.insert(appSettings).values({
             id: crypto.randomUUID(),
             key,
@@ -181,50 +173,48 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
             description: `Setting for ${key}`,
             isPublic: false,
             updatedAt: new Date(),
-            updatedBy: request.user?.userId?.toString() || null
+            updatedBy: request.user?.userId ?? null
           });
         }
       });
-      
+
       await Promise.all(updatePromises);
-      
+
       // Fetch updated settings to return
       const updatedSettingsList = await db.select().from(appSettings);
-      
+
       // Group by category
-      const groupedSettings: Record<string, Record<string, any>> = {
+      const groupedSettings: Record<string, Record<string, unknown>> = {
         general: {},
         localized: {},
         financial: {},
         inventory: {}
       };
-      
-      updatedSettingsList.forEach((setting) => {
-        const category = setting.category || 'general';
+
+      updatedSettingsList.forEach((setting: typeof appSettings.$inferSelect) => {
+        const category = setting.category ?? 'general';
         const key = setting.key;
-        
+
         try {
-          const value = JSON.parse(setting.value as string);
+          const value: unknown = JSON.parse(setting.value as string);
           const shortKey = key.replace(`${category}.`, '');
-          
           if (groupedSettings[category]) {
             groupedSettings[category][shortKey] = value;
           }
-        } catch (parseError) {
+        } catch {
           if (category in groupedSettings) {
             const shortKey = key.replace(`${category}.`, '');
             groupedSettings[category][shortKey] = setting.value;
           }
         }
       });
-      
+
       return reply.code(200).send({
         success: true,
         message: 'Settings updated successfully',
         settings: groupedSettings,
         updated_count: Object.keys(settings).length
       });
-
     } catch (error) {
       if (error instanceof z.ZodError) {
         return reply.code(400).send({
@@ -232,14 +222,14 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid request body',
-            details: error.errors.map((e: any) => ({
+            details: error.errors.map((e) => ({
               field: e.path.join('.'),
               message: e.message
             }))
           }
         });
       }
-      
+
       fastify.log.error({ err: error }, 'Update settings error');
       return reply.code(500).send({
         success: false,

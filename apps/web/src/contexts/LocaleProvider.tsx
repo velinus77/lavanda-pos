@@ -26,3 +26,6 @@ export const useAppLocale = () => {
   }
   return context;
 };
+
+/** @deprecated Use useAppLocale instead */
+export const useLocale = useAppLocale;

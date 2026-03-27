@@ -1,12 +1,16 @@
 import { defineConfig } from 'drizzle-kit';
-import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
-  schema: path.join(__dirname, './src/schema/index.ts'),
+  schema: join(__dirname, './src/schema/index.ts'),
   out: './migrations',
   dialect: 'sqlite',
   dbCredentials: {
-    url: '../data/lavanda.db',
+    url: join(__dirname, '../data/lavanda.db'),
   },
   verbose: true,
   strict: true,

@@ -9,12 +9,12 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
 export interface TokenPayload {
-  userId: number;
+  userId: string;
   role: string;
 }
 
 export interface RefreshTokenPayload {
-  userId: number;
+  userId: string;
 }
 
 export interface Tokens {
@@ -39,7 +39,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 /**
  * Generate access and refresh tokens for a user
  */
-export function generateTokens(userId: number, role: string): Tokens {
+export function generateTokens(userId: string, role: string): Tokens {
   const accessToken = jwt.sign(
     { userId, role },
     ACCESS_TOKEN_SECRET,
@@ -74,7 +74,7 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 /**
  * Parse cookies from a Cookie header string
  */
-export function parseCookies(cookieHeader: string): Record<string, string> {
+export function parseCookies(cookieHeader: string): Record<string, string | undefined> {
   return cookie.parse(cookieHeader);
 }
 

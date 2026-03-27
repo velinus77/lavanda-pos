@@ -98,7 +98,7 @@ export function hasExpiringSoonBatches(batches: Batch[], thresholdSeconds = 2592
 export const stockAdjustmentSchema = z.object({
   product_id: z.string().uuid({ message: 'Invalid product ID format' }).or(z.string().regex(/^prod_/)),
   batch_id: z.string().uuid({ message: 'Invalid batch ID format' }).or(z.string().regex(/^batch_/)).optional(),
-  quantity: z.number().int().nonzero('Quantity must be non-zero'),
+  quantity: z.number().int().refine((n) => n !== 0, 'Quantity must be non-zero'),
   reason: z.string().min(1, 'Reason is required').max(500, 'Reason must be under 500 characters'),
   reference_id: z.string().optional().nullable()
 });

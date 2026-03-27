@@ -23,7 +23,7 @@ export interface ApiResponse<T = unknown> {
   error?: ApiError;
 }
 
-export interface ApiError {
+export interface ApiErrorShape {
   code: string;
   message: string;
   details?: Record<string, string>;

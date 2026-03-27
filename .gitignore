@@ -5,6 +5,7 @@ build
 .next
 .env
 .env.local
+.env.*.local
 *.log
 .DS_Store
 coverage
@@ -12,3 +13,10 @@ coverage
 .cache
 *.db
 *.sqlite
+
+# Environment files
+apps/api/.env
+
+# SQLite database files
+data/
+packages/data/

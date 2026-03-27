@@ -1,6 +1,8 @@
-import { FastifyPluginAsync, FastifyInstance } from 'fastify';
-import { hashPassword, verifyPassword, generateTokens, verifyRefreshToken, createCookieHeader, parseCookies } from '../services/auth.service.js';
+import { FastifyPluginAsync } from 'fastify';
+import { verifyPassword, generateTokens, verifyRefreshToken, createCookieHeader, parseCookies } from '../services/auth.service.js';
 import { requireAuth } from '../plugins/auth.js';
+import { db, users, roles } from '@lavanda/db';
+import { eq, or } from 'drizzle-orm';
 
 // In-memory login attempt tracking (replace with Redis in production)
 interface LoginAttempt {
@@ -21,17 +23,17 @@ const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 function isLocked(identifier: string): boolean {
   const attempt = loginAttempts.get(identifier);
   if (!attempt) return false;
-  
+
   if (attempt.lockedUntil && Date.now() < attempt.lockedUntil) {
     return true;
   }
-  
+
   // Lock expired, reset
   if (attempt.lockedUntil && Date.now() >= attempt.lockedUntil) {
     loginAttempts.set(identifier, { count: 0, lockedUntil: null });
     return false;
   }
-  
+
   return false;
 }
 
@@ -41,11 +43,11 @@ function isLocked(identifier: string): boolean {
 function recordFailedAttempt(identifier: string): void {
   const attempt = loginAttempts.get(identifier) || { count: 0, lockedUntil: null };
   attempt.count += 1;
-  
+
   if (attempt.count >= MAX_ATTEMPTS) {
     attempt.lockedUntil = Date.now() + LOCK_DURATION_MS;
   }
-  
+
   loginAttempts.set(identifier, attempt);
 }
 
@@ -62,31 +64,16 @@ function resetAttempts(identifier: string): void {
 function getLockTimeRemaining(identifier: string): number {
   const attempt = loginAttempts.get(identifier);
   if (!attempt || !attempt.lockedUntil) return 0;
-  
+
   const remaining = attempt.lockedUntil - Date.now();
   return Math.max(0, Math.ceil(remaining / 1000));
-}
-
-/**
- * Execute a database query with proper typing
- */
-async function queryDatabase(
-  fastify: FastifyInstance,
-  query: string,
-  values: unknown[]
-): Promise<{ rows: unknown[] }> {
-  // Try different database plugin configurations
-  const db = (fastify as any).db || (fastify as any).pg;
-  if (!db) {
-    throw new Error('Database not configured');
-  }
-  return db.query(query, values);
 }
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * POST /api/auth/login
    * Validates credentials, returns tokens + user info, sets refresh token cookie
+   * Accepts login by email OR username
    */
   fastify.post('/login', async (request, reply) => {
     try {
@@ -96,7 +83,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       if (!email || !password) {
         return reply.code(400).send({
           error: 'Bad Request',
-          message: 'Email and password are required'
+          message: 'Email and password are required',
         });
       }
 
@@ -106,58 +93,66 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(423).send({
           error: 'Locked',
           message: `Too many failed login attempts. Try again in ${lockTime} seconds.`,
-          lockTimeRemaining: lockTime
+          lockTimeRemaining: lockTime,
         });
       }
 
-      // Query user from database
-      let user;
+      // Query user by email or username using Drizzle ORM
+      let user: typeof users.$inferSelect | undefined;
       try {
-        const result = await queryDatabase(
-          fastify,
-          'SELECT id, full_name, email, role, password_hash, is_active FROM users WHERE email = $1',
-          [email]
-        );
-        
-        if (result.rows.length === 0) {
+        const result = await db
+          .select()
+          .from(users)
+          .where(or(eq(users.email, email), eq(users.username, email)))
+          .limit(1);
+
+        if (result.length === 0) {
           recordFailedAttempt(email);
           return reply.code(401).send({
             error: 'Unauthorized',
-            message: 'Invalid email or password'
+            message: 'Invalid email or password',
           });
         }
-        user = result.rows[0];
+        user = result[0];
       } catch (dbError) {
         fastify.log.error({ err: dbError }, 'Database query failed during login');
         return reply.code(500).send({
           error: 'Internal Server Error',
-          message: 'Database error'
+          message: 'Database error',
         });
       }
 
       // Check if user is active
-      if (!(user as any).is_active) {
+      if (!user.isActive) {
         return reply.code(403).send({
           error: 'Forbidden',
-          message: 'Account is deactivated'
+          message: 'Account is deactivated',
         });
       }
 
       // Verify password
-      const isValid = await verifyPassword(password, (user as any).password_hash);
+      const isValid = await verifyPassword(password, user.passwordHash);
       if (!isValid) {
         recordFailedAttempt(email);
         return reply.code(401).send({
           error: 'Unauthorized',
-          message: 'Invalid email or password'
+          message: 'Invalid email or password',
         });
       }
 
       // Reset failed attempts on successful login
       resetAttempts(email);
 
+      // Fetch role name for token payload
+      const roleResult = await db
+        .select({ name: roles.name })
+        .from(roles)
+        .where(eq(roles.id, user.roleId))
+        .limit(1);
+      const roleName = roleResult.length > 0 ? roleResult[0].name : 'cashier';
+
       // Generate tokens
-      const { accessToken, refreshToken } = generateTokens((user as any).id, (user as any).role);
+      const { accessToken, refreshToken } = generateTokens(user.id, roleName);
 
       // Set refresh token cookie
       const cookieHeader = createCookieHeader(
@@ -170,19 +165,19 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       // Return user info + access token
       return reply.code(200).send({
         user: {
-          id: (user as any).id,
-          full_name: (user as any).full_name,
-          email: (user as any).email,
-          role: (user as any).role
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          username: user.username,
+          role: roleName,
         },
-        accessToken
+        accessToken,
       });
-
     } catch (error) {
       fastify.log.error({ err: error }, 'Login error');
       return reply.code(500).send({
         error: 'Internal Server Error',
-        message: 'Failed to process login request'
+        message: 'Failed to process login request',
       });
     }
   });
@@ -198,14 +193,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       reply.header('Set-Cookie', cookieHeader);
 
       return reply.code(200).send({
-        message: 'Successfully logged out'
+        message: 'Successfully logged out',
       });
-
     } catch (error) {
       fastify.log.error({ err: error }, 'Logout error');
       return reply.code(500).send({
         error: 'Internal Server Error',
-        message: 'Failed to process logout request'
+        message: 'Failed to process logout request',
       });
     }
   });
@@ -221,7 +215,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       if (!cookieHeader) {
         return reply.code(401).send({
           error: 'Unauthorized',
-          message: 'No refresh token cookie found'
+          message: 'No refresh token cookie found',
         });
       }
 
@@ -231,56 +225,63 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       if (!refreshToken) {
         return reply.code(401).send({
           error: 'Unauthorized',
-          message: 'No refresh token cookie found'
+          message: 'No refresh token cookie found',
         });
       }
 
       // Verify refresh token
       const payload = verifyRefreshToken(refreshToken);
 
-      // Query user from database to get role
-      let user;
+      // Query user from database to verify still active
+      let user: typeof users.$inferSelect | undefined;
       try {
-        const result = await queryDatabase(
-          fastify,
-          'SELECT id, role, is_active FROM users WHERE id = $1',
-          [payload.userId]
-        );
+        const result = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, payload.userId))
+          .limit(1);
 
-        if (result.rows.length === 0) {
+        if (result.length === 0) {
           return reply.code(401).send({
             error: 'Unauthorized',
-            message: 'User not found'
+            message: 'User not found',
           });
         }
-        user = result.rows[0];
+        user = result[0];
       } catch (dbError) {
         fastify.log.error({ err: dbError }, 'Database query failed during token refresh');
         return reply.code(500).send({
           error: 'Internal Server Error',
-          message: 'Database error'
+          message: 'Database error',
         });
       }
 
-      if (!(user as any).is_active) {
+      if (!user.isActive) {
         return reply.code(403).send({
           error: 'Forbidden',
-          message: 'Account is deactivated'
+          message: 'Account is deactivated',
         });
       }
 
-      // Generate new access token
-      const { accessToken } = generateTokens((user as any).id, (user as any).role);
+      // Fetch role name
+      const roleResult = await db
+        .select({ name: roles.name })
+        .from(roles)
+        .where(eq(roles.id, user.roleId))
+        .limit(1);
+      const roleName = roleResult.length > 0 ? roleResult[0].name : 'cashier';
+
+      // Generate new tokens
+      const { accessToken } = generateTokens(user.id, roleName);
 
       return reply.code(200).send({
-        accessToken
+        accessToken,
       });
-
     } catch (error) {
       fastify.log.error({ err: error }, 'Refresh token error');
       return reply.code(401).send({
         error: 'Unauthorized',
-        message: 'Invalid or expired refresh token'
+        message: 'Invalid or expired refresh token',
       });
     }
   });
@@ -295,44 +296,52 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       const { userId } = request.user!;
 
       // Query user from database
-      let user;
+      let user: typeof users.$inferSelect | undefined;
       try {
-        const result = await queryDatabase(
-          fastify,
-          'SELECT id, full_name, email, role, is_active FROM users WHERE id = $1',
-          [userId]
-        );
+        const result = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
 
-        if (result.rows.length === 0) {
+        if (result.length === 0) {
           return reply.code(404).send({
             error: 'Not Found',
-            message: 'User not found'
+            message: 'User not found',
           });
         }
-        user = result.rows[0];
+        user = result[0];
       } catch (dbError) {
         fastify.log.error({ err: dbError }, 'Database query failed during get current user');
         return reply.code(500).send({
           error: 'Internal Server Error',
-          message: 'Database error'
+          message: 'Database error',
         });
       }
 
+      // Fetch role name
+      const roleResult = await db
+        .select({ name: roles.name })
+        .from(roles)
+        .where(eq(roles.id, user.roleId))
+        .limit(1);
+      const roleName = roleResult.length > 0 ? roleResult[0].name : 'cashier';
+
       return reply.code(200).send({
         user: {
-          id: (user as any).id,
-          full_name: (user as any).full_name,
-          email: (user as any).email,
-          role: (user as any).role,
-          is_active: (user as any).is_active
-        }
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          username: user.username,
+          role: roleName,
+          isActive: user.isActive,
+        },
       });
-
     } catch (error) {
       fastify.log.error({ err: error }, 'Get current user error');
       return reply.code(500).send({
         error: 'Internal Server Error',
-        message: 'Failed to retrieve user information'
+        message: 'Failed to retrieve user information',
       });
     }
   });

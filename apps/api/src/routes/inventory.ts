@@ -34,7 +34,7 @@ export const inventoryRoutes: FastifyPluginAsync = async (fastify) => {
     
     return {
       success: true,
-      data: { id: parseInt(id), ...body },
+      data: { id },
       message: 'Stock adjusted successfully',
     };
   });

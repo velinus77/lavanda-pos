@@ -420,7 +420,7 @@ export const UserManager: React.FC<UserManagerProps> = ({
     });
   };
 
-  const roleLabels: Record<string, string> = {
+  const roleLabels: Record<string, Record<string, string>> = {
     en: { admin: 'Admin', manager: 'Manager', cashier: 'Cashier' },
     ar: { admin: 'مدير', manager: 'مساعد مدير', cashier: 'كاشير' },
   };

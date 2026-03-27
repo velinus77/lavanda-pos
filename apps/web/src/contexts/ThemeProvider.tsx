@@ -26,3 +26,6 @@ export const useAppTheme = () => {
   }
   return context;
 };
+
+/** @deprecated Use useAppTheme instead */
+export const useTheme = useAppTheme;

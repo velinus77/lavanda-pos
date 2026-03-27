@@ -47,7 +47,7 @@ async function seed() {
         id: 'role_admin',
         name: 'admin',
         description: 'Full system access - manage users, settings, inventory, and sales',
-        permissions: JSON.stringify([
+        permissions: [
           'users:read', 'users:write', 'users:delete',
           'roles:read', 'roles:write',
           'products:read', 'products:write', 'products:delete',
@@ -57,30 +57,30 @@ async function seed() {
           'settings:read', 'settings:write',
           'audit:read',
           'sync:manage',
-        ]),
+        ],
       },
       {
         id: 'role_manager',
         name: 'manager',
         description: 'Manage inventory, sales, and reports - no user management',
-        permissions: JSON.stringify([
+        permissions: [
           'products:read', 'products:write',
           'inventory:read', 'inventory:write',
           'sales:read', 'sales:write', 'sales:refund',
           'reports:read',
           'settings:read',
           'audit:read',
-        ]),
+        ],
       },
       {
         id: 'role_cashier',
         name: 'cashier',
         description: 'Process sales and view basic inventory',
-        permissions: JSON.stringify([
+        permissions: [
           'products:read',
           'inventory:read',
           'sales:read', 'sales:write',
-        ]),
+        ],
       },
     ];
     
@@ -673,7 +673,6 @@ async function seed() {
           nameAr: product.nameAr,
           barcode: product.barcode,
           description: product.description,
-          descriptionAr: product.descriptionAr,
           categoryId: product.categoryId,
           supplierId: product.supplierId,
           costPrice: product.costPrice,

@@ -4,6 +4,7 @@ import {
   integer,
   real,
   index,
+  type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
@@ -58,7 +59,7 @@ export const categories = sqliteTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     nameAr: text('name_ar'), // Arabic name
-    parentId: text('parent_id').references((): ReturnType<typeof categories['_']['columns']> => categories.id, {
+    parentId: text('parent_id').references((): AnySQLiteColumn => categories.id, {
       onDelete: 'set null',
     }),
     description: text('description'),
@@ -652,7 +653,43 @@ export type NewAuditLog = typeof auditLogs.$inferInsert;
 export type SyncQueueItem = typeof syncQueue.$inferSelect;
 export type NewSyncQueueItem = typeof syncQueue.$inferInsert;
 
-// ============== RECEIPT PRINTS (from separate file) ==============
-export { receiptPrints, receiptPrintsRelations } from './receipt-prints';
+// ============== RECEIPT PRINTS ==============
+// Tracks every time a receipt was printed / re-printed for a sale.
+export const receiptPrints = sqliteTable('receipt_prints', {
+  id: text('id').primaryKey(),
+
+  saleId: text('sale_id')
+    .notNull()
+    .references((): AnySQLiteColumn => sales.id, { onDelete: 'cascade' }),
+
+  // Who and when
+  printedAt: integer('printed_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  printedBy: text('printed_by'), // user ID snapshot
+
+  // Hardware / template info
+  printerName: text('printer_name'),
+  receiptTemplate: text('receipt_template').default('default'),
+
+  // Original print vs reprint
+  isReprint: integer('is_reprint', { mode: 'boolean' }).notNull().default(false),
+
+  // Result
+  status: text('status').notNull().default('success'), // success | failed
+  errorMessage: text('error_message'),
+
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const receiptPrintsRelations = relations(receiptPrints, ({ one }) => ({
+  sale: one(sales, {
+    fields: [receiptPrints.saleId],
+    references: [sales.id],
+  }),
+}));
+
 export type ReceiptPrint = typeof receiptPrints.$inferSelect;
 export type NewReceiptPrint = typeof receiptPrints.$inferInsert;

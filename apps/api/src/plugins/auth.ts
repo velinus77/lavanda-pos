@@ -21,8 +21,12 @@ const defaultSkipPaths = ['/health'];
 export const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, options) => {
   const skipPaths = options.skipPaths || defaultSkipPaths;
 
-  // Decorate request with user property (already declared via module augmentation)
-  fastify.decorateRequest('user', null);
+  // Decorate request with user property using getter/setter to satisfy Fastify 5 types
+  fastify.decorateRequest('user', {
+    getter() {
+      return undefined;
+    }
+  });
 
   // Add onRequest hook to verify JWT from Authorization header
   fastify.addHook('onRequest', async (request, reply) => {
@@ -34,7 +38,7 @@ export const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify,
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
-      // No auth header - request.user remains null, routes can handle this
+      // No auth header - request.user remains undefined, routes can handle this
       return;
     }
 
@@ -51,9 +55,9 @@ export const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify,
       const payload = verifyAccessToken(token);
       request.user = payload;
       request.log.debug(`Authenticated user ${payload.userId} (${payload.role})`);
-    } catch (error) {
+    } catch (_error) {
       request.log.warn('Invalid or expired access token');
-      // request.user remains null - routes can handle unauthorized access
+      // request.user remains undefined - routes can handle unauthorized access
     }
   });
 };
@@ -62,7 +66,7 @@ export const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify,
  * Pre-built onRequest hook for protecting specific routes
  * Use this when you want to enforce authentication on specific routes
  */
-export async function requireAuth(request: FastifyRequest, reply: any) {
+export async function requireAuth(request: FastifyRequest, reply: { code: (n: number) => { send: (o: unknown) => void } }) {
   if (!request.user) {
     return reply.code(401).send({
       error: 'Unauthorized',
@@ -75,7 +79,7 @@ export async function requireAuth(request: FastifyRequest, reply: any) {
  * Pre-built onRequest hook for enforcing specific roles
  */
 export function requireRole(...allowedRoles: string[]) {
-  return async (request: FastifyRequest, reply: any) => {
+  return async (request: FastifyRequest, reply: { code: (n: number) => { send: (o: unknown) => void } }) => {
     if (!request.user) {
       return reply.code(401).send({
         error: 'Unauthorized',

@@ -69,14 +69,15 @@ const buildApp = () => {
   });
 
   // Error handler
-  app.setErrorHandler((error, request, reply) => {
-    app.log.error(error);
-    
-    reply.status(error.statusCode || 500).send({
+  app.setErrorHandler((error, _request, reply) => {
+    const err = error as Error & { statusCode?: number; validation?: unknown[] };
+    app.log.error(err);
+
+    reply.status(err.statusCode ?? 500).send({
       success: false,
       error: {
-        code: error.name || 'INTERNAL_ERROR',
-        message: error.message || 'An unexpected error occurred',
+        code: err.name || 'INTERNAL_ERROR',
+        message: err.message || 'An unexpected error occurred',
       },
     });
   });
@@ -92,8 +93,8 @@ const start = async () => {
 
   try {
     await app.listen({ port, host });
-    console.log(`🚀 Lavanda API server running at http://${host}:${port}`);
-    console.log(`📝 Health check: http://${host}:${port}/api/health`);
+    console.log(`\uD83D\uDE80 Lavanda API server running at http://${host}:${port}`);
+    console.log(`\uD83D\uDCDD Health check: http://${host}:${port}/api/health`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
