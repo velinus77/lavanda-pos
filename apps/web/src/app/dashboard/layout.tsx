@@ -174,6 +174,7 @@ function getPageTitle(pathname: string, locale: 'ar' | 'en'): string {
     '/dashboard/products': { ar: 'المنتجات', en: 'Products' },
     '/dashboard/categories': { ar: 'التصنيفات', en: 'Categories' },
     '/dashboard/suppliers': { ar: 'الموردون', en: 'Suppliers' },
+    '/dashboard/sales': { ar: 'سجل المبيعات', en: 'Sales History' },
     '/dashboard/stock': { ar: 'إدارة المخزون', en: 'Stock Management' },
     '/dashboard/users': { ar: 'المستخدمون', en: 'Users' },
     '/dashboard/settings': { ar: 'الإعدادات', en: 'Settings' },
