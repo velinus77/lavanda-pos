@@ -7,16 +7,17 @@
 import { getDb, closeDb } from './db';
 import * as schema from './schema/index';
 import { eq } from 'drizzle-orm';
-import * as crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 
 // Utility to generate UUIDs
 function generateId(): string {
-  return crypto.randomBytes(16).toString('hex');
+  return randomBytes(16).toString('hex');
 }
 
-// Utility to hash passwords (using simple hash for demo - use bcrypt in production)
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+// Utility to hash passwords using bcrypt
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
 }
 
 // Helper to calculate days from now
@@ -109,7 +110,7 @@ async function seed() {
         id: generateId(),
         username: 'admin',
         email: 'admin@lavanda-pos.localhost',
-        passwordHash: hashPassword('admin123'), // Default password - change immediately!
+        passwordHash: await hashPassword('admin123'), // Default password - change immediately!
         fullName: 'System Administrator',
         roleId: 'role_admin',
         isActive: true,
