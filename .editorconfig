@@ -1,0 +1,11 @@
+[*.js]
+quote_props=consistent
+
+[*.ts,*.tsx]
+quote_props=consistent
+
+[*.json]
+indent_size=2
+
+[*.md]
+trim_trailing_whitespace=false

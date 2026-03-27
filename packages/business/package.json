@@ -1,0 +1,24 @@
+{
+  "name": "@lavanda/business",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./inventory": "./src/services/inventory.ts",
+    "./pricing": "./src/services/pricing.ts",
+    "./validation": "./src/services/validation.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lavanda/db": "*",
+    "@lavanda/shared": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://prettier.io/schemas/config-prettier.json",
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": false,
+  "doubleQuote": true,
+  "tabWidth": 2,
+  "useTabs": false,
+  "printWidth": 100,
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": "*.json",
+      "options": {
+        "printWidth": 120
+      }
+    }
+  ]
+}
