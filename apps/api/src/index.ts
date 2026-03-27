@@ -13,6 +13,10 @@ import { suppliersRoutes } from './routes/suppliers.routes';
 import { inventoryRoutes } from './routes/inventory';
 import { stockRoutes } from './routes/stock.routes';
 import { settingsRoutes } from './routes/settings.routes';
+import { posRoutes } from './routes/pos';
+import { exchangeRatesRoutes } from './routes/exchange-rates';
+import { reportsRoutes } from './routes/reports';
+import { syncRoutes } from './routes/sync';
 
 const buildApp = () => {
   const app = Fastify({
@@ -48,6 +52,10 @@ const buildApp = () => {
   app.register(inventoryRoutes, { prefix: '/api/inventory' });
   app.register(stockRoutes, { prefix: '/api/stock' });
   app.register(settingsRoutes, { prefix: '/api/settings' });
+  app.register(posRoutes, { prefix: '/api/pos' });
+  app.register(exchangeRatesRoutes, { prefix: '/api/exchange-rates' });
+  app.register(reportsRoutes, { prefix: '/api/reports' });
+  app.register(syncRoutes, { prefix: '/api/sync' });
 
   // 404 handler
   app.setNotFoundHandler((request, reply) => {

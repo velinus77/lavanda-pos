@@ -651,3 +651,8 @@ export type NewAuditLog = typeof auditLogs.$inferInsert;
 
 export type SyncQueueItem = typeof syncQueue.$inferSelect;
 export type NewSyncQueueItem = typeof syncQueue.$inferInsert;
+
+// ============== RECEIPT PRINTS (from separate file) ==============
+export { receiptPrints, receiptPrintsRelations } from './receipt-prints';
+export type ReceiptPrint = typeof receiptPrints.$inferSelect;
+export type NewReceiptPrint = typeof receiptPrints.$inferInsert;
