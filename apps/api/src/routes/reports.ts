@@ -83,7 +83,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
             lte(sales.createdAt, endOfDay)
           )
         )
-        .all();
+        ;
 
       // ── Fetch cashier names for all cashiers in result ──
       const cashierIds = [...new Set(rows.map((r) => r.cashierId))];
@@ -247,7 +247,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
         .innerJoin(products, eq(productBatches.productId, products.id))
         .where(and(eq(productBatches.isActive, true), eq(products.isActive, true)))
         .orderBy(products.name, productBatches.expiryDate)
-        .all();
+        ;
 
       // Group by product
       const productMap = new Map<
@@ -401,7 +401,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
         .leftJoin(users, eq(stockMovements.userId, users.id))
         .where(and(...dateConditions))
         .orderBy(desc(stockMovements.createdAt))
-        .all();
+        ;
 
       // Filter by type in JS (handles multi-value map like adjust -> adjustment|dispose)
       const filtered =
@@ -439,7 +439,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
               lte(productBatches.receivedAt, endOfDay)
             )
           )
-          .all();
+          ;
 
         // Deduplicate: skip batches already represented as 'receipt' stockMovements
         const receiptBatchNums = new Set(
@@ -479,6 +479,92 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
         error: 'Internal Server Error',
         message: 'Failed to generate stock movements report',
       });
+    }
+  });
+
+  /**
+   * GET /api/reports/stats
+   * Dashboard stats: totalProducts, lowStock, expiringSoon, totalSalesToday, salesTodayCount
+   */
+  fastify.get('/stats', { preHandler: [requireAuth] }, async (request, reply) => {
+    try {
+      const now = new Date();
+      const startOfToday = new Date(now);
+      startOfToday.setUTCHours(0, 0, 0, 0);
+
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // Total active products
+      const allProducts = await db
+        .select({ id: products.id })
+        .from(products)
+        .where(eq(products.isActive, true))
+        ;
+      const totalProducts = allProducts.length;
+
+      // Low stock: fetch all active products with their batch quantities, compare to minStockLevel
+      const batchStocks = await db
+        .select({
+          productId: productBatches.productId,
+          currentQty: productBatches.currentQuantity,
+          minStockLevel: products.minStockLevel,
+        })
+        .from(productBatches)
+        .innerJoin(products, eq(productBatches.productId, products.id))
+        .where(and(eq(productBatches.isActive, true), eq(products.isActive, true)))
+        ;
+
+      // Aggregate total qty per product
+      const stockByProduct = new Map<string, { total: number; minStockLevel: number }>();
+      for (const row of batchStocks) {
+        const existing = stockByProduct.get(row.productId);
+        if (existing) {
+          existing.total += row.currentQty;
+        } else {
+          stockByProduct.set(row.productId, {
+            total: row.currentQty,
+            minStockLevel: row.minStockLevel ?? 0,
+          });
+        }
+      }
+      const lowStock = [...stockByProduct.values()].filter(
+        (p) => p.total <= p.minStockLevel
+      ).length;
+
+      // Expiring soon: active batches with expiryDate between now and 30 days from now
+      const expiringSoonBatches = await db
+        .select({ id: productBatches.id })
+        .from(productBatches)
+        .where(
+          and(
+            eq(productBatches.isActive, true),
+            gte(productBatches.expiryDate, now),
+            lte(productBatches.expiryDate, thirtyDaysFromNow)
+          )
+        )
+        ;
+      const expiringSoon = expiringSoonBatches.length;
+
+      // Today's sales
+      const todaySales = await db
+        .select({ totalAmount: sales.totalAmount })
+        .from(sales)
+        .where(gte(sales.createdAt, startOfToday))
+        ;
+
+      const totalSalesToday = todaySales.reduce((sum, s) => sum + (s.totalAmount ?? 0), 0);
+      const salesTodayCount = todaySales.length;
+
+      return reply.code(200).send({
+        totalProducts,
+        lowStock,
+        expiringSoon,
+        totalSalesToday,
+        salesTodayCount,
+      });
+    } catch (error) {
+      fastify.log.error({ err: error }, 'Stats error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to load stats' });
     }
   });
 };

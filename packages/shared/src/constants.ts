@@ -9,7 +9,7 @@ export const LOCALES = {
 };
 
 export const CURRENCIES = {
-  IQD: 'IQD', // Iraqi Dinar
+  EGP: 'EGP', // Egyptian Pound
   USD: 'USD', // US Dollar
 };
 
@@ -21,7 +21,7 @@ export const DATE_FORMATS = {
   DATETIME: "yyyy-MM-dd'T'HH:mm:ss",
 };
 
-export const TIMEZONE = 'Asia/Baghdad';
+export const TIMEZONE = 'Africa/Cairo';
 
 export const API_ROUTES = {
   PRODUCTS: '/api/products',

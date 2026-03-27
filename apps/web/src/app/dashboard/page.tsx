@@ -61,12 +61,12 @@ export default function DashboardPage() {
     const token = getAuthToken();
     if (!token) { setLoading(false); return; }
 
-    fetch(`${API_BASE}/dashboard/stats`, {
+    fetch(`${API_BASE}/reports/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setStats(json.data);
+        if (json && !json.error) setStats(json);
         else setStatsError(true);
       })
       .catch(() => setStatsError(true))
