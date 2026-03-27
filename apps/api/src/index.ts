@@ -16,6 +16,7 @@ import { settingsRoutes } from './routes/settings.routes';
 import { posRoutes } from './routes/pos';
 import { exchangeRatesRoutes } from './routes/exchange-rates';
 import { reportsRoutes } from './routes/reports';
+import { dashboardRoutes } from './routes/dashboard.routes';
 import { syncRoutes } from './routes/sync';
 
 const buildApp = () => {
@@ -55,6 +56,7 @@ const buildApp = () => {
   app.register(posRoutes, { prefix: '/api/pos' });
   app.register(exchangeRatesRoutes, { prefix: '/api/exchange-rates' });
   app.register(reportsRoutes, { prefix: '/api/reports' });
+  app.register(dashboardRoutes, { prefix: '/api/dashboard' });
   app.register(syncRoutes, { prefix: '/api/sync' });
 
   // 404 handler

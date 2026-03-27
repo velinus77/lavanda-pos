@@ -124,11 +124,11 @@ export default function SalesPage() {
       setSales(data.sales ?? []);
       setTotal(data.total ?? 0);
     } catch {
-      setFetchError(isRTL ? 'فشل تحميل المبيعات' : 'Failed to load sales');
+      setFetchError(isRTL ? '\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A' : 'Failed to load sales');
     } finally {
       setIsFetching(false);
     }
-  }, [dateFrom, dateTo, isRTL, page]);
+  }, [dateFrom, dateTo, isRTL]);
 
   useEffect(() => {
     if (!isLoading) loadSales(page);
@@ -159,28 +159,28 @@ export default function SalesPage() {
   }
 
   const t = {
-    title: isRTL ? 'سجل المبيعات' : 'Sales History',
-    subtitle: isRTL ? 'عرض وتصفية جميع المبيعات المنجزة' : 'View and filter all completed sales',
-    receiptNo: isRTL ? 'رقم الإيصال' : 'Receipt No.',
-    date: isRTL ? 'التاريخ' : 'Date',
-    cashier: isRTL ? 'الكاشير' : 'Cashier',
-    payment: isRTL ? 'طريقة الدفع' : 'Payment',
-    total: isRTL ? 'الإجمالي' : 'Total',
-    actions: isRTL ? 'إجراءات' : 'Actions',
-    viewReceipt: isRTL ? 'عرض الإيصال' : 'View Receipt',
-    from: isRTL ? 'من' : 'From',
-    to: isRTL ? 'إلى' : 'To',
-    filter: isRTL ? 'تصفية' : 'Filter',
-    clear: isRTL ? 'مسح' : 'Clear',
-    noSales: isRTL ? 'لا توجد مبيعات' : 'No sales found',
-    showing: isRTL ? 'عرض' : 'Showing',
-    of: isRTL ? 'من' : 'of',
-    results: isRTL ? 'نتيجة' : 'results',
-    prev: isRTL ? 'السابق' : 'Previous',
-    next: isRTL ? 'التالي' : 'Next',
-    cash: isRTL ? 'نقداً' : 'Cash',
-    card: isRTL ? 'بطاقة' : 'Card',
-    closePreview: isRTL ? 'إغلاق' : 'Close',
+    title: isRTL ? '\u0633\u062C\u0644 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A' : 'Sales History',
+    subtitle: isRTL ? '\u0639\u0631\u0636 \u0648\u062A\u0635\u0641\u064A\u0629 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0627\u0644\u0645\u0646\u062C\u0632\u0629' : 'View and filter all completed sales',
+    receiptNo: isRTL ? '\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644' : 'Receipt No.',
+    date: isRTL ? '\u0627\u0644\u062A\u0627\u0631\u064A\u062E' : 'Date',
+    cashier: isRTL ? '\u0627\u0644\u0643\u0627\u0634\u064A\u0631' : 'Cashier',
+    payment: isRTL ? '\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639' : 'Payment',
+    total: isRTL ? '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A' : 'Total',
+    actions: isRTL ? '\u0625\u062C\u0631\u0627\u0621\u0627\u062A' : 'Actions',
+    viewReceipt: isRTL ? '\u0639\u0631\u0636 \u0627\u0644\u0625\u064A\u0635\u0627\u0644' : 'View Receipt',
+    from: isRTL ? '\u0645\u0646' : 'From',
+    to: isRTL ? '\u0625\u0644\u0649' : 'To',
+    filter: isRTL ? '\u062A\u0635\u0641\u064A\u0629' : 'Filter',
+    clear: isRTL ? '\u0645\u0633\u062D' : 'Clear',
+    noSales: isRTL ? '\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0628\u064A\u0639\u0627\u062A' : 'No sales found',
+    showing: isRTL ? '\u0639\u0631\u0636' : 'Showing',
+    of: isRTL ? '\u0645\u0646' : 'of',
+    results: isRTL ? '\u0646\u062A\u064A\u062C\u0629' : 'results',
+    prev: isRTL ? '\u0627\u0644\u0633\u0627\u0628\u0642' : 'Previous',
+    next: isRTL ? '\u0627\u0644\u062A\u0627\u0644\u064A' : 'Next',
+    cash: isRTL ? '\u0646\u0642\u062F\u0627\u064B' : 'Cash',
+    card: isRTL ? '\u0628\u0637\u0627\u0642\u0629' : 'Card',
+    closePreview: isRTL ? '\u0625\u063A\u0644\u0627\u0642' : 'Close',
   };
 
   return (
@@ -189,7 +189,7 @@ export default function SalesPage() {
       <div className="mb-6">
         <nav className="text-sm text-gray-500 dark:text-gray-400 mb-2">
           <ol className="flex items-center space-x-2 rtl:space-x-reverse">
-            <li><a href="/dashboard" className="hover:text-gray-700 dark:hover:text-gray-300">{isRTL ? 'الرئيسية' : 'Home'}</a></li>
+            <li><a href="/dashboard" className="hover:text-gray-700 dark:hover:text-gray-300">{isRTL ? '\u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629' : 'Home'}</a></li>
             <li className="flex items-center">
               <svg className="w-4 h-4 mx-2 rtl:rotate-180" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -362,10 +362,10 @@ export default function SalesPage() {
                 </svg>
               </button>
             </div>
-            <div className="p-2" style={{ height: '500px' }}>
+            <div className="p-2 h-[500px]">
               <iframe
                 src={receiptBlobUrl ?? undefined}
-                className="w-full h-96 border rounded"
+                className="w-full h-full border rounded"
                 title="Receipt Preview"
               />
             </div>
@@ -382,7 +382,7 @@ export default function SalesPage() {
                 }}
                 className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
               >
-                {isRTL ? 'طباعة' : 'Print'}
+                {isRTL ? '\u0637\u0628\u0627\u0639\u0629' : 'Print'}
               </button>
             </div>
           </div>
