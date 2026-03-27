@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { login, AuthError } from '../lib/auth';
 
 interface LocaleContextType {
@@ -82,7 +83,7 @@ const translations: Record<'ar' | 'en', Translations> = {
 };
 
 export interface LoginFormProps {
-  onLoginSuccess?: (userData: any) => void;
+  onLoginSuccess?: (userData: unknown) => void;
   initialLocale?: 'ar' | 'en';
   initialTheme?: 'light' | 'dark';
 }
@@ -92,6 +93,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   initialLocale = 'en',
   initialTheme = 'light',
 }) => {
+  const router = useRouter();
   const [locale, setLocale] = useState<'ar' | 'en'>(initialLocale);
   const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme);
   const [email, setEmail] = useState('');
@@ -172,6 +174,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         // AuthResponse returned - login successful
         if (onLoginSuccess) {
           onLoginSuccess(result.user);
+        } else {
+          router.push('/dashboard');
         }
       }
     } catch (err) {

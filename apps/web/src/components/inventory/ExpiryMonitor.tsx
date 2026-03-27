@@ -54,6 +54,7 @@ interface Translations {
     disposed: string;
   };
   refreshButton: string;
+  cancelButton: string;
   lastUpdated: string;
   filterPlaceholder: string;
   sortBy: string;
@@ -96,6 +97,7 @@ const translations: Record<'ar' | 'en', Translations> = {
       disposed: 'Disposed',
     },
     refreshButton: 'Refresh',
+    cancelButton: 'Cancel',
     lastUpdated: 'Last updated',
     filterPlaceholder: 'Filter by product name or batch number...',
     sortBy: 'Sort by',
@@ -136,6 +138,7 @@ const translations: Record<'ar' | 'en', Translations> = {
       disposed: 'تم التخلص',
     },
     refreshButton: 'تحديث',
+    cancelButton: 'إلغاء',
     lastUpdated: 'آخر تحديث',
     filterPlaceholder: 'تصفية باسم المنتج أو رقم الدفعة...',
     sortBy: 'ترتيب حسب',

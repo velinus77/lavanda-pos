@@ -496,3 +496,39 @@ For issues or questions, refer to the codebase documentation in each module's so
 ---
 
 *Built for Lavanda Pharmacy - Hurghada, Egypt*
+
+## Local Development
+
+### Prerequisites
+- Node.js >= 20
+- npm >= 10
+
+### Setup
+```bash
+# Install dependencies
+npm install
+
+# Set up environment
+cp apps/api/.env.example apps/api/.env
+# Edit apps/api/.env with your values
+
+# Run database migration
+npm run --workspace=packages/db db:migrate
+
+# Seed initial data (admin/admin123)
+npm run --workspace=packages/db db:seed
+
+# Start development servers
+npm run dev
+```
+
+### Default Credentials
+- Username: `admin`
+- Password: `admin123`
+- **Change immediately in production**
+
+## Known Limitations
+- Login rate limiting is in-memory only (resets on restart); not suitable for production without Redis
+- POS checkout, exchange rates, reports, and sync queue endpoints are stubbed (501 Not Implemented) pending full implementation
+- Receipt printing is schema-ready but not yet fully wired to a print service
+- SQLite is used for simplicity; migrate to PostgreSQL for production workloads

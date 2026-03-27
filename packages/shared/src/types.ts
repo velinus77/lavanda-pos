@@ -20,7 +20,7 @@ export type UserRole = 'admin' | 'manager' | 'cashier';
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
-  error?: ApiError;
+  error?: ApiErrorShape;
 }
 
 export interface ApiErrorShape {

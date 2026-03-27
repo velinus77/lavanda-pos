@@ -14,8 +14,8 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
-  const { locale, toggleLocale } = useLocale();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const { locale, toggle: toggleLocale } = useLocale();
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

@@ -33,7 +33,7 @@ export interface InputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
     VariantProps<typeof inputVariants> {
   label?: string;
-  error?: string;
+  error?: boolean;
   leftElement?: React.ReactNode;
   rightElement?: React.ReactNode;
 }

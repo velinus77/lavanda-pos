@@ -20,3 +20,6 @@ apps/api/.env
 # SQLite database files
 data/
 packages/data/
+
+# Additional env files
+apps/web/.env.local

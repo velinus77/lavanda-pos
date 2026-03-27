@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAccessToken } from '@/lib/auth';
+import { getTokenForRequest } from '@/lib/auth';
 
 // Types for app settings
 interface GeneralSettings {
