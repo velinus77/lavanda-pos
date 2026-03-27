@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCachedUser, User } from '@/lib/auth';
+import { getCachedUser } from '@/lib/auth';
 import { useLocale } from '@/contexts/LocaleProvider';
 import { useTheme } from '@/contexts/ThemeProvider';
 import StockAdjustment from '@/components/inventory/StockAdjustment';
@@ -12,7 +12,6 @@ export default function StockPage() {
   const router = useRouter();
   const { locale } = useLocale();
   const { theme } = useTheme();
-  const [user, setUser] = useState<User | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'adjustment' | 'expiry'>('adjustment');
@@ -21,21 +20,21 @@ export default function StockPage() {
 
   useEffect(() => {
     const cachedUser = getCachedUser();
-    setUser(cachedUser || null);
 
     // Check role authorization - cashier should be redirected
     if (cachedUser) {
       if (cachedUser.role === 'cashier') {
+        setIsLoading(false);
         router.replace('/dashboard');
         return;
       }
       setIsAuthorized(true);
+      setIsLoading(false);
     } else {
+      setIsLoading(false);
       router.replace('/login');
       return;
     }
-
-    setIsLoading(false);
   }, [router]);
 
   if (isLoading || !isAuthorized) {
@@ -142,4 +141,3 @@ export default function StockPage() {
     </div>
   );
 }
-
