@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Modal from '../ui/Modal';
-import { getAuthToken } from '@/lib/auth';
+import { authenticatedFetch } from '@/lib/auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -11,6 +11,7 @@ interface Product {
   name_en: string;
   name_ar: string;
   barcode: string;
+  cost_price: number;
 }
 
 interface ProductBatch {
@@ -22,6 +23,12 @@ interface ProductBatch {
   expiry_date: string;
   days_until_expiry: number;
   is_expired: boolean;
+}
+
+interface NewBatchFormState {
+  batch_number: string;
+  expiry_date: string;
+  cost_price: string;
 }
 
 interface AdjustmentPreview {
@@ -103,8 +110,8 @@ const translations: Record<'ar' | 'en', Translations> = {
     selectBatch: 'Select a batch',
     adjustmentTypeLabel: 'Adjustment Type *',
     quantityLabel: 'Quantity *',
-    reasonLabel: 'Reason *',
-    reasonPlaceholder: 'Explain why this adjustment is needed',
+    reasonLabel: 'Reason',
+    reasonPlaceholder: 'Auto-filled from the selected action, product, and batch',
     previewButton: 'Preview Adjustment',
     submitButton: 'Submit Adjustment',
     cancelButton: 'Cancel',
@@ -113,7 +120,7 @@ const translations: Record<'ar' | 'en', Translations> = {
     confirmButton: 'Confirm & Submit',
     closePreviewButton: 'Back to Edit',
     noBatches: 'No batches available for this product',
-    fefoSuggestion: 'FEFO:建议选择最早到期的批次',
+    fefoSuggestion: 'FEFO: choose the batch with the earliest expiry date',
     expiredWarning: 'This batch is expired',
     lowStockWarning: 'Low stock warning',
     adjustmentTypes: {
@@ -152,60 +159,60 @@ const translations: Record<'ar' | 'en', Translations> = {
     },
   },
   ar: {
-    title: 'تعديل المخزون',
-    description: 'تعديل مستويات المخزون للمنتجات مع تتبع الدفعات',
-    productLabel: 'المنتج *',
-    batchLabel: 'الدفعة *',
-    selectProduct: 'اختر منتجاً',
-    selectBatch: 'اختر دفعة',
-    adjustmentTypeLabel: 'نوع التعديل *',
-    quantityLabel: 'الكمية *',
-    reasonLabel: 'السبب *',
-    reasonPlaceholder: 'اشرح سبب الحاجة لهذا التعديل',
-    previewButton: 'معاينة التعديل',
-    submitButton: 'إ提交 التعديل',
-    cancelButton: 'إلغاء',
-    submitLoading: 'جاري المعالجة...',
-    previewTitle: 'تأكيد التعديل',
-    confirmButton: 'تأكيد وإ提交',
-    closePreviewButton: 'العودة للتحرير',
-    noBatches: 'لا توجد دفعات متاحة لهذا المنتج',
-    fefoSuggestion: 'FEFO: يوصى باختيار أقرب دفعة منتهي',
-    expiredWarning: 'هذه الدفعة منتهية',
-    lowStockWarning: 'تحذير: مخزون منخفض',
+    title: '-?? --?',
+    description: '-?? --? --? --?? ?? -? --?',
+    productLabel: '-- *',
+    batchLabel: '-- *',
+    selectProduct: '-? --',
+    selectBatch: '-? -?',
+    adjustmentTypeLabel: '- --? *',
+    quantityLabel: '-- *',
+    reasonLabel: '-??',
+    reasonPlaceholder: '-? --?? ?? --? --? --? --?',
+    previewButton: '-- --?',
+    submitButton: '-?? --?',
+    cancelButton: '-??',
+    submitLoading: '-? --??...',
+    previewTitle: '-?? --?',
+    confirmButton: '-?? --',
+    closePreviewButton: '-- --?',
+    noBatches: '?? -? -?? -?? -? --',
+    fefoSuggestion: 'FEFO: -? --? -- -- --?',
+    expiredWarning: '- -- --',
+    lowStockWarning: '-??: -?? -??',
     adjustmentTypes: {
-      add: 'إضافة مخزون',
-      remove: 'إزالة مخزون',
-      return: 'إرجاع للمخزون',
-      dispose: 'التخلص/تلف',
+      add: '-?? -??',
+      remove: '-?? -??',
+      return: '-?? --?',
+      dispose: '- ?? -??',
     },
     adjustmentTypeDescriptions: {
-      add: 'إضافة مخزون جديد من شراء أو إنتاج',
-      remove: 'إزالة مخزون بسبب فقدان أو تصحيح',
-      return: 'إرجاع عناصر من عميل أو تالف',
-      dispose: 'التخلص بسبب تلف أو انتهاء أو مشاكل جودة',
+      add: '-?? -?? -? ?? -? ?? --',
+      remove: '-?? -?? -? -?? ?? -??',
+      return: '-?? -?? - --?',
+      dispose: '-- ?? --? -? -?? ?? --??',
     },
     previewFields: {
-      product: 'المنتج',
-      batch: 'رقم الدفعة',
-      type: 'نوع التعديل',
-      previousQty: 'الكمية السابقة',
-      change: 'التغيير',
-      newQty: 'الكمية الجديدة',
-      reason: 'السبب',
-      valueImpact: 'تأثير القيمة',
+      product: '--',
+      batch: '- --',
+      type: '- --?',
+      previousQty: '-- --?',
+      change: '--?',
+      newQty: '-- --?',
+      reason: '-??',
+      valueImpact: '-?? --',
     },
     errors: {
-      productRequired: 'الرجاء اختيار منتج',
-      batchRequired: 'الرجاء اختيار دفعة',
-      quantityRequired: 'الرجاء إدخال الكمية',
-      quantityInvalid: 'يجب أن تكون الكمية رقماً موجباً',
-      reasonRequired: 'الرجاء تقديم سبب',
-      submitFailed: 'فشل إنشاء التعديل',
-      fetchFailed: 'فشل تحميل المنتجات',
+      productRequired: '-- -- -?',
+      batchRequired: '-- -- -?',
+      quantityRequired: '-- -?? --',
+      quantityInvalid: '- ?? -? -- -?? --',
+      reasonRequired: '-- -?? -',
+      submitFailed: '- -?? --?',
+      fetchFailed: '- -?? --??',
     },
     success: {
-      adjustmentCreated: 'تم إنشاء تعديل المخزون بنجاح',
+      adjustmentCreated: '?? -?? -?? --? -??',
     },
   },
 };
@@ -239,19 +246,18 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'remove' | 'return' | 'dispose'>('add');
   const [quantity, setQuantity] = useState<number>(1);
   const [reason, setReason] = useState('');
+  const [createNewBatch, setCreateNewBatch] = useState(false);
+  const [newBatchForm, setNewBatchForm] = useState<NewBatchFormState>({
+    batch_number: '',
+    expiry_date: '',
+    cost_price: '',
+  });
+  const autoReasonRef = useRef('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<AdjustmentPreview | null>(null);
-
-  const getAuthHeaders = useCallback(() => {
-    const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  }, []);
 
   const mapProduct = useCallback(
     (product: any): Product => ({
@@ -259,6 +265,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       name_en: product.name_en ?? product.name ?? '',
       name_ar: product.name_ar ?? '',
       barcode: product.barcode ?? '',
+      cost_price: Number(product.cost_price ?? product.costPrice ?? 0),
     }),
     []
   );
@@ -290,8 +297,10 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     try {
       setIsLoadingProducts(true);
       setError(null);
-      const response = await fetch(productsApiUrl, {
-        headers: getAuthHeaders(),
+      const response = await authenticatedFetch(productsApiUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       if (!response.ok) {
         throw new Error(t.errors.fetchFailed);
@@ -304,12 +313,14 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [getAuthHeaders, mapProduct, productsApiUrl, t.errors.fetchFailed]);
+  }, [mapProduct, productsApiUrl, t.errors.fetchFailed]);
 
   const fetchBatches = useCallback(async (productId: string) => {
     try {
-      const response = await fetch(`${productsApiUrl}/${productId}/batches`, {
-        headers: getAuthHeaders(),
+      const response = await authenticatedFetch(`${productsApiUrl}/${productId}/batches`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       if (response.ok) {
         const data = await response.json();
@@ -329,7 +340,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       console.error('Failed to fetch batches:', err);
       setBatches([]);
     }
-  }, [getAuthHeaders, mapBatch, productsApiUrl]);
+  }, [mapBatch, productsApiUrl]);
 
   useEffect(() => {
     fetchProducts();
@@ -344,12 +355,89 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     }
   }, [selectedProductId, fetchBatches]);
 
+  useEffect(() => {
+    if (adjustmentType !== 'add') {
+      setCreateNewBatch(false);
+      return;
+    }
+
+    const selectedProduct = products.find((product) => product.id === selectedProductId);
+
+    if (selectedProductId && batches.length === 0) {
+      setCreateNewBatch(true);
+      setSelectedBatchId(null);
+      setNewBatchForm((current) => ({
+        ...current,
+        cost_price: current.cost_price || (selectedProduct?.cost_price ? String(selectedProduct.cost_price) : ''),
+      }));
+      return;
+    }
+
+    if (batches.length > 0) {
+      setCreateNewBatch(false);
+    }
+  }, [adjustmentType, batches.length, products, selectedProductId]);
+
+  const buildAutoReason = useCallback(() => {
+    const product = products.find((item) => item.id === selectedProductId);
+    const batch = batches.find((item) => item.id === selectedBatchId);
+    const productName = product ? (locale === 'ar' ? product.name_ar : product.name_en) : null;
+    const batchNumber = createNewBatch ? newBatchForm.batch_number.trim() : batch?.batch_number;
+
+    if (locale === 'ar') {
+      if (productName && batchNumber) {
+        return `${t.adjustmentTypes[adjustmentType]} ?????? ${productName} - ???? ${batchNumber}`;
+      }
+      if (productName) {
+        return `${t.adjustmentTypes[adjustmentType]} ?????? ${productName}`;
+      }
+      return t.adjustmentTypes[adjustmentType];
+    }
+
+    if (productName && batchNumber) {
+      return `${t.adjustmentTypes[adjustmentType]} for ${productName} - batch ${batchNumber}`;
+    }
+    if (productName) {
+      return `${t.adjustmentTypes[adjustmentType]} for ${productName}`;
+    }
+    return t.adjustmentTypes[adjustmentType];
+  }, [
+    adjustmentType,
+    batches,
+    createNewBatch,
+    locale,
+    newBatchForm.batch_number,
+    products,
+    selectedBatchId,
+    selectedProductId,
+    t.adjustmentTypes,
+  ]);
+
+  useEffect(() => {
+    const nextAutoReason = buildAutoReason();
+
+    if (!reason.trim() || reason === autoReasonRef.current) {
+      setReason(nextAutoReason);
+    }
+
+    autoReasonRef.current = nextAutoReason;
+  }, [buildAutoReason, reason]);
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
+    const normalizedReason = reason.trim() || buildAutoReason();
     if (!selectedProductId) errors.product = t.errors.productRequired;
-    if (!selectedBatchId) errors.batch = t.errors.batchRequired;
+    if (createNewBatch) {
+      if (!newBatchForm.batch_number.trim()) errors.batch_number = 'Please enter a batch number';
+      if (!newBatchForm.expiry_date) errors.expiry_date = 'Please select an expiry date';
+      if (!newBatchForm.cost_price || Number(newBatchForm.cost_price) <= 0) {
+        errors.cost_price = 'Cost price must be greater than 0';
+      }
+    } else if (!selectedBatchId) {
+      errors.batch = t.errors.batchRequired;
+    }
     if (!quantity || quantity <= 0) errors.quantity = t.errors.quantityInvalid;
-    if (!reason.trim()) errors.reason = t.errors.reasonRequired;
+    if (!normalizedReason.trim()) errors.reason = t.errors.reasonRequired;
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -357,17 +445,35 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   const generatePreview = () => {
     const product = products.find(p => p.id === selectedProductId);
     const batch = batches.find(b => b.id === selectedBatchId);
-    
-    if (!product || !batch) return null;
-
-    const previousQuantity = batch.current_quantity;
+    const normalizedReason = reason.trim() || buildAutoReason();
     let quantityChange = quantity;
     
     // For remove/dispose, quantity is subtracted
     if (adjustmentType === 'remove' || adjustmentType === 'dispose') {
       quantityChange = -quantity;
     }
-    
+
+    if (createNewBatch) {
+      if (!product) return null;
+
+      const batchNumber = newBatchForm.batch_number.trim() || 'New batch';
+      const costPrice = Number(newBatchForm.cost_price || product.cost_price || 0);
+
+      return {
+        product_name: locale === 'ar' ? product.name_ar : product.name_en,
+        batch_number: batchNumber,
+        adjustment_type: adjustmentType,
+        quantity_change: quantity,
+        previous_quantity: 0,
+        new_quantity: quantity,
+        reason: normalizedReason,
+        value_impact: quantity * costPrice,
+      };
+    }
+
+    if (!product || !batch) return null;
+
+    const previousQuantity = batch.current_quantity;
     const newQuantity = previousQuantity + quantityChange;
     const valueImpact = quantityChange * batch.cost_price;
 
@@ -378,7 +484,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       quantity_change: quantityChange,
       previous_quantity: previousQuantity,
       new_quantity: newQuantity,
-      reason,
+      reason: normalizedReason,
       value_impact: valueImpact,
     };
   };
@@ -394,22 +500,38 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!selectedProductId || !selectedBatchId) return;
+    if (!selectedProductId) return;
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const response = await fetch(stockAdjustApiUrl, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          product_id: selectedProductId,
-          batch_id: selectedBatchId,
-          quantity: adjustmentType === 'remove' || adjustmentType === 'dispose' ? -quantity : quantity,
-          reason: reason.trim(),
-        }),
-      });
+      const normalizedReason = reason.trim() || buildAutoReason();
+      const response = createNewBatch
+        ? await authenticatedFetch(`${productsApiUrl}/${selectedProductId}/batches`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              batch_number: newBatchForm.batch_number.trim(),
+              cost_price: Number(newBatchForm.cost_price),
+              initial_quantity: quantity,
+              expiry_date: Math.floor(new Date(newBatchForm.expiry_date).getTime() / 1000),
+            }),
+          })
+        : await authenticatedFetch(stockAdjustApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              product_id: selectedProductId,
+              batch_id: selectedBatchId,
+              quantity: adjustmentType === 'remove' || adjustmentType === 'dispose' ? -quantity : quantity,
+              reason: normalizedReason,
+            }),
+          });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -424,6 +546,12 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       setAdjustmentType('add');
       setQuantity(1);
       setReason('');
+      setCreateNewBatch(false);
+      setNewBatchForm({
+        batch_number: '',
+        expiry_date: '',
+        cost_price: '',
+      });
       setShowPreview(false);
       setPreview(null);
       
@@ -516,6 +644,8 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               value={selectedProductId || ''}
               onChange={(e) => {
                 setSelectedProductId(e.target.value || null);
+                setSelectedBatchId(null);
+                setCreateNewBatch(false);
                 setFormErrors({ ...formErrors, product: '' });
               }}
               className={`${inputClasses} ${formErrors.product ? 'border-red-500' : ''}`}
@@ -538,12 +668,16 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               value={selectedBatchId || ''}
               onChange={(e) => {
                 setSelectedBatchId(e.target.value || null);
+                setCreateNewBatch(e.target.value === '__new__');
                 setFormErrors({ ...formErrors, batch: '' });
               }}
               className={`${inputClasses} ${formErrors.batch ? 'border-red-500' : ''}`}
-              disabled={!selectedProductId || batches.length === 0}
+              disabled={!selectedProductId || (batches.length === 0 && adjustmentType !== 'add')}
             >
               <option value="">{t.selectBatch}</option>
+              {adjustmentType === 'add' && selectedProductId && (
+                <option value="__new__">Create a new batch</option>
+              )}
               {batches.map((batch) => (
                 <option key={batch.id} value={batch.id}>
                   {batch.batch_number} - {batch.current_quantity} units
@@ -551,7 +685,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                 </option>
               ))}
             </select>
-            {batches.length === 0 && selectedProductId && (
+            {batches.length === 0 && selectedProductId && !createNewBatch && (
               <p className={`mt-1 text-sm ${
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
               }`}>
@@ -573,6 +707,56 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
             )}
           </div>
 
+          {createNewBatch && (
+            <>
+              <div>
+                <label className={labelClasses}>Batch Number *</label>
+                <input
+                  type="text"
+                  value={newBatchForm.batch_number}
+                  onChange={(e) => {
+                    setNewBatchForm({ ...newBatchForm, batch_number: e.target.value });
+                    setFormErrors({ ...formErrors, batch_number: '' });
+                  }}
+                  className={`${inputClasses} ${formErrors.batch_number ? 'border-red-500' : ''}`}
+                  placeholder="Enter batch number"
+                />
+                {formErrors.batch_number && <p className="mt-1 text-sm text-red-500">{formErrors.batch_number}</p>}
+              </div>
+
+              <div>
+                <label className={labelClasses}>Expiry Date *</label>
+                <input
+                  type="date"
+                  value={newBatchForm.expiry_date}
+                  onChange={(e) => {
+                    setNewBatchForm({ ...newBatchForm, expiry_date: e.target.value });
+                    setFormErrors({ ...formErrors, expiry_date: '' });
+                  }}
+                  className={`${inputClasses} ${formErrors.expiry_date ? 'border-red-500' : ''}`}
+                />
+                {formErrors.expiry_date && <p className="mt-1 text-sm text-red-500">{formErrors.expiry_date}</p>}
+              </div>
+
+              <div>
+                <label className={labelClasses}>Cost Price *</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={newBatchForm.cost_price}
+                  onChange={(e) => {
+                    setNewBatchForm({ ...newBatchForm, cost_price: e.target.value });
+                    setFormErrors({ ...formErrors, cost_price: '' });
+                  }}
+                  className={`${inputClasses} ${formErrors.cost_price ? 'border-red-500' : ''}`}
+                  placeholder="Enter cost price"
+                />
+                {formErrors.cost_price && <p className="mt-1 text-sm text-red-500">{formErrors.cost_price}</p>}
+              </div>
+            </>
+          )}
+
           {/* Adjustment Type */}
           <div className="md:col-span-2">
             <label className={labelClasses}>{t.adjustmentTypeLabel}</label>
@@ -581,7 +765,14 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setAdjustmentType(type)}
+                  onClick={() => {
+                    setAdjustmentType(type);
+                    if (type !== 'add') {
+                      setCreateNewBatch(false);
+                    } else if (selectedProductId && batches.length === 0) {
+                      setCreateNewBatch(true);
+                    }
+                  }}
                   className={`p-4 rounded-lg border-2 transition-all text-left ${
                     adjustmentType === type
                       ? 'border-purple-600 bg-purple-600/10'
@@ -630,7 +821,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               }`}>
                 Current stock: <span className="font-medium">{getSelectedBatch()?.current_quantity}</span>
                 {getSelectedBatch()?.is_expired && (
-                  <span className="ml-2 text-red-500">• {t.expiredWarning}</span>
+                  <span className="ml-2 text-red-500">- {t.expiredWarning}</span>
                 )}
               </div>
             )}
@@ -664,6 +855,12 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               setAdjustmentType('add');
               setQuantity(1);
               setReason('');
+              setCreateNewBatch(false);
+              setNewBatchForm({
+                batch_number: '',
+                expiry_date: '',
+                cost_price: '',
+              });
               setFormErrors({});
             }}
             className={buttonSecondaryClasses}
@@ -840,4 +1037,5 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 };
 
 export default StockAdjustment;
+
 

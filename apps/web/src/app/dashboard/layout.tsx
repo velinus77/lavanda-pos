@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/dashboard/Sidebar';
-import { User, getCachedUser, isAuthenticated, logout } from '@/lib/auth';
+import { User, getCachedUser, getCurrentUser, isAuthenticated, logout } from '@/lib/auth';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { useLocale } from '@/contexts/LocaleProvider';
 
@@ -59,16 +59,41 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const copy = shellCopy[locale];
 
   useEffect(() => {
-    const cachedUser = getCachedUser();
-    const hasToken = isAuthenticated();
+    let cancelled = false;
 
-    if (!hasToken || !cachedUser) {
+    const initializeSession = async () => {
+      const cachedUser = getCachedUser();
+      const hasToken = isAuthenticated();
+
+      if (cachedUser && hasToken) {
+        if (!cancelled) {
+          setUser(cachedUser);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const restoredUser = await getCurrentUser();
+
+      if (cancelled) {
+        return;
+      }
+
+      if (restoredUser) {
+        setUser(restoredUser);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(false);
       router.replace('/login');
-      return;
-    }
+    };
 
-    setUser(cachedUser);
-    setIsLoading(false);
+    void initializeSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const handleLogout = useCallback(async () => {
@@ -78,10 +103,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100">
-        <div className="rounded-3xl border border-white/10 bg-white/5 px-8 py-7 text-center shadow-2xl shadow-emerald-950/30 backdrop-blur">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full border-4 border-emerald-400 border-t-transparent animate-spin" />
-          <p className="text-sm font-medium text-slate-200">{copy.loading}</p>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+        <div className="rounded-[28px] border border-[var(--border)] bg-[var(--card)] px-8 py-7 text-center shadow-[0_24px_60px_rgba(15,23,42,0.08)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full border-4 border-[var(--accent)] border-t-transparent animate-spin" />
+          <p className="text-sm font-medium text-[var(--foreground)]">{copy.loading}</p>
         </div>
       </div>
     );
@@ -95,19 +120,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div
-      className={`min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.12),_transparent_32%),linear-gradient(180deg,_#f5f7fb_0%,_#eef2f7_100%)] text-slate-900 dark:bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_24%),linear-gradient(180deg,_#020617_0%,_#0f172a_58%,_#111827_100%)] dark:text-slate-100 ${isRTL ? 'rtl' : 'ltr'}`}
+      className={`min-h-screen bg-[var(--background)] text-[var(--foreground)] ${isRTL ? 'rtl' : 'ltr'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
+      <div className="fixed inset-x-0 top-0 h-64 bg-[linear-gradient(180deg,rgba(156,122,69,0.08),transparent)] dark:bg-[linear-gradient(180deg,rgba(184,148,90,0.12),transparent)]" aria-hidden="true" />
       <Sidebar user={user} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className={isRTL ? 'lg:pr-72' : 'lg:pl-72'}>
+      <div className={`relative ${isRTL ? 'lg:pr-72' : 'lg:pl-72'}`}>
         <header className="sticky top-0 z-30 px-4 pb-4 pt-4 sm:px-6">
-          <div className="rounded-[28px] border border-white/60 bg-white/80 px-4 py-4 shadow-lg shadow-slate-200/50 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/20 sm:px-6">
+          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--card)]/96 px-4 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:shadow-[0_18px_50px_rgba(0,0,0,0.24)] sm:px-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 items-start gap-3">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300 lg:hidden"
+                  className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)] lg:hidden"
                   aria-label={copy.openSidebar}
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,13 +142,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </button>
 
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
                     {copy.workspace}
                   </p>
-                  <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                  <h1 className="truncate text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
                     {pageTitle}
                   </h1>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-sm text-[var(--muted)]">
                     {user.full_name} | {user.role}
                   </p>
                 </div>
@@ -131,7 +157,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex shrink-0 items-center gap-2">
                 <button
                   onClick={toggleTheme}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-3 text-sm font-medium text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300"
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--muted)] shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
                   aria-label={copy.themeLabel}
                   title={theme === 'dark' ? copy.lightMode : copy.darkMode}
                 >
@@ -149,27 +175,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
                 <button
                   onClick={toggleLocale}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300"
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--muted)] shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
                   aria-label={copy.languageLabel}
                 >
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="rounded-full border border-[var(--border)] bg-[var(--card)] px-2 py-0.5 text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">
                     {locale === 'ar' ? 'EN' : 'AR'}
                   </span>
                 </button>
 
-                <div className="hidden items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-950/60 sm:flex">
+                <div className="hidden items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 shadow-sm sm:flex">
                   <div className="text-right rtl:text-left">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{user.full_name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{user.full_name}</p>
+                    <p className="text-xs text-[var(--muted)]">{user.email}</p>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-sm font-bold text-white shadow-lg shadow-emerald-500/25">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] text-sm font-bold text-[var(--accent-strong)]">
                     {user.full_name.charAt(0).toUpperCase()}
                   </div>
                 </div>
 
                 <button
                   onClick={handleLogout}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-rose-200/70 bg-rose-50 text-rose-600 transition hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[#90553d] transition hover:border-[#c98d70] hover:bg-[#f1e5dc] dark:text-[#f0b29b] dark:hover:bg-[#372117]"
                   aria-label={copy.logout}
                   title={copy.logout}
                 >
@@ -183,7 +209,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         <main className="px-4 pb-8 sm:px-6">
-          <div className="rounded-[32px] border border-white/55 bg-white/72 p-4 shadow-xl shadow-slate-200/40 backdrop-blur dark:border-white/10 dark:bg-slate-900/55 dark:shadow-black/20 sm:p-6">
+          <div className="rounded-[32px] border border-[var(--border)] bg-[var(--card)] p-4 shadow-[0_24px_60px_rgba(15,23,42,0.06)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.2)] sm:p-6">
             {children}
           </div>
         </main>

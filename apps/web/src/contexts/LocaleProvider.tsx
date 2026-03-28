@@ -8,10 +8,6 @@ const LocaleContext = createContext<ReturnType<typeof useLocaleHook> | null>(nul
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const localeState = useLocaleHook();
 
-  if (!localeState.isLoaded) {
-    return <div className="min-h-screen bg-background" />;
-  }
-
   return (
     <LocaleContext.Provider value={localeState}>
       {children}

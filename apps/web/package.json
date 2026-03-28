@@ -11,20 +11,21 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@lavanda/i18n": "*",
     "@lavanda/shared": "*",
     "@lavanda/ui": "*",
-    "@lavanda/i18n": "*",
+    "autoprefixer": "^10.4.27",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.2",
-    "tailwindcss": "^4.0.0",
-    "postcss": "^8.4.49",
-    "@tailwindcss/postcss": "^4.0.0"
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.7.2"
   }
 }

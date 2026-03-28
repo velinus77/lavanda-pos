@@ -1,10 +1,19 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { IBM_Plex_Sans_Arabic, Manrope } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { LocaleProvider } from '@/contexts/LocaleProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+const manrope = Manrope({
+  subsets: ['latin'],
+  variable: '--font-sans',
+});
+
+const arabicSans = IBM_Plex_Sans_Arabic({
+  subsets: ['arabic', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-arabic',
+});
 
 export const metadata: Metadata = {
   title: 'Lavanda POS - Pharmacy Management System',
@@ -36,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${manrope.variable} ${arabicSans.variable}`}>
         <ThemeProvider>
           <LocaleProvider>
             {children}

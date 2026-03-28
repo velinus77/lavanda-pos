@@ -204,20 +204,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <div className="flex items-center justify-center p-1 transition-colors duration-300">
       <div
-        className={`w-full max-w-md rounded-[28px] border p-8 shadow-2xl transition-all duration-300 ${
+        className={`w-full max-w-md rounded-[28px] border p-8 shadow-[0_24px_60px_rgba(15,23,42,0.08)] transition-all duration-300 ${
           theme === 'dark'
-            ? 'border-white/10 bg-slate-900/85 shadow-black/25'
-            : 'border-white/70 bg-white/90 shadow-emerald-100/70'
+            ? 'border-[var(--border)] bg-[var(--card)]'
+            : 'border-[var(--border)] bg-[var(--card)]'
         }`}
       >
         <div className="flex justify-between items-center mb-6">
           <button
             type="button"
             onClick={toggleLocale}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
               theme === 'dark'
-                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ? 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
+                : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
             }`}
             aria-label={t.languageSwitch}
           >
@@ -235,10 +235,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="button"
             onClick={toggleTheme}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
               theme === 'dark'
-                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                ? 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
+                : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
             }`}
             aria-label={theme === 'dark' ? t.lightMode : t.darkMode}
           >
@@ -266,18 +266,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </div>
 
         <div className="text-center mb-8">
-          <h1 className={`text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            {t.title}
-          </h1>
-          <p className={theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}>{t.subtitle}</p>
+          <h1 className="mb-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">{t.title}</h1>
+          <p className="text-[var(--muted)]">{t.subtitle}</p>
         </div>
 
         {error && (
           <div
-            className={`mb-6 p-4 rounded-lg border transition-all ${
+            className={`mb-6 rounded-2xl border p-4 transition-all ${
               theme === 'dark'
-                ? 'bg-red-900/20 border-red-800 text-red-300'
-                : 'bg-red-50 border-red-200 text-red-700'
+                ? 'border-[#6d3a35] bg-[#2f1d1a] text-[#f1c0b7]'
+                : 'border-[#e0c2bd] bg-[#f8ebe8] text-[#8a4c41]'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -303,9 +301,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <div>
             <label
               htmlFor="email"
-              className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-              }`}
+              className="mb-2 block text-sm font-medium text-[var(--foreground)]"
             >
               {t.emailLabel}
             </label>
@@ -316,10 +312,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
               placeholder={t.emailPlaceholder}
-              className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
+              className={`w-full rounded-2xl border px-4 py-3 transition-all outline-none ${
                 theme === 'dark'
-                  ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'bg-white border-slate-300 text-gray-900 placeholder-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                  ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
               } ${error && !email ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
               autoComplete="username"
             />
@@ -328,9 +324,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <div>
             <label
               htmlFor="password"
-              className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-              }`}
+              className="mb-2 block text-sm font-medium text-[var(--foreground)]"
             >
               {t.passwordLabel}
             </label>
@@ -341,10 +335,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
               placeholder={t.passwordPlaceholder}
-              className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
+              className={`w-full rounded-2xl border px-4 py-3 transition-all outline-none ${
                 theme === 'dark'
-                  ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20'
-                  : 'bg-white border-slate-300 text-gray-900 placeholder-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                  ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
               } ${error && !password ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
               autoComplete="current-password"
             />
@@ -357,22 +351,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={isLoading}
-                className={`w-4 h-4 rounded border transition-colors ${
+                className={`h-4 w-4 rounded border transition-colors ${
                   theme === 'dark'
-                    ? 'border-slate-600 bg-slate-800 text-emerald-400 focus:ring-emerald-500/20'
-                    : 'border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500/20'
+                    ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)]/15'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)]/15'
                 } disabled:opacity-50`}
               />
-              <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                {t.rememberMe}
-              </span>
+              <span className="text-sm text-[var(--muted)]">{t.rememberMe}</span>
             </label>
             <button
               type="button"
               className={`text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'text-emerald-400 hover:text-emerald-300'
-                  : 'text-emerald-700 hover:text-emerald-800'
+                  ? 'text-[var(--accent)] hover:text-[var(--accent-strong)]'
+                  : 'text-[var(--accent)] hover:text-[var(--accent-strong)]'
               }`}
             >
               {t.forgotPassword}
@@ -382,10 +374,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all transform ${
+            className={`w-full rounded-2xl px-4 py-3 font-semibold transition-all ${
               isLoading
-                ? 'bg-emerald-300 cursor-not-allowed'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-500/20 hover:shadow-xl'
+                ? 'cursor-not-allowed bg-[color:var(--accent)]/45 text-white'
+                : 'bg-[var(--foreground)] text-[var(--card)] hover:bg-[#0f1928] dark:hover:bg-[#1a2434]'
             }`}
           >
             {isLoading ? (

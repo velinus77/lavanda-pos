@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
-import { getAuthToken } from '@/lib/auth';
+import { authenticatedFetch } from '@/lib/auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -189,22 +189,22 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
   const [selectedBatch, setSelectedBatch] = useState<ExpiringBatch | null>(null);
   const [isDisposing, setIsDisposing] = useState(false);
 
-  const getAuthHeaders = useCallback(() => {
-    const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  }, []);
-
   const fetchExpiryData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
       const [expiringRes, expiredRes] = await Promise.all([
-        fetch(expiringApiUrl, { headers: getAuthHeaders() }),
-        fetch(expiredApiUrl, { headers: getAuthHeaders() }),
+        authenticatedFetch(expiringApiUrl, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+        authenticatedFetch(expiredApiUrl, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
       ]);
 
       if (!expiringRes.ok || !expiredRes.ok) {
@@ -224,7 +224,7 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [expiringApiUrl, expiredApiUrl, getAuthHeaders, t.errorFetch]);
+  }, [expiringApiUrl, expiredApiUrl, t.errorFetch]);
 
   useEffect(() => {
     fetchExpiryData();
@@ -235,9 +235,11 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
 
     setIsDisposing(true);
     try {
-      const response = await fetch(disposeApiUrl, {
+      const response = await authenticatedFetch(disposeApiUrl, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           batch_ids: [selectedBatch.id],
           reason: 'Expired batch disposal',

@@ -4,20 +4,20 @@ import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 
 import { authPlugin } from './plugins/auth.js';
-import { healthRoutes } from './routes/health';
-import { authRoutes } from './routes/auth.routes';
-import { usersRoutes } from './routes/users.routes';
-import { productsRoutes } from './routes/products.routes';
-import { categoriesRoutes } from './routes/categories.routes';
-import { suppliersRoutes } from './routes/suppliers.routes';
-import { inventoryRoutes } from './routes/inventory';
-import { stockRoutes } from './routes/stock.routes';
-import { settingsRoutes } from './routes/settings.routes';
-import { posRoutes } from './routes/pos';
-import { exchangeRatesRoutes } from './routes/exchange-rates';
-import { reportsRoutes } from './routes/reports';
-import { dashboardRoutes } from './routes/dashboard.routes';
-import { syncRoutes } from './routes/sync';
+import { healthRoutes } from './routes/health.js';
+import { authRoutes } from './routes/auth.routes.js';
+import { usersRoutes } from './routes/users.routes.js';
+import { productsRoutes } from './routes/products.routes.js';
+import { categoriesRoutes } from './routes/categories.routes.js';
+import { suppliersRoutes } from './routes/suppliers.routes.js';
+import { inventoryRoutes } from './routes/inventory.js';
+import { stockRoutes } from './routes/stock.routes.js';
+import { settingsRoutes } from './routes/settings.routes.js';
+import { posRoutes } from './routes/pos.js';
+import { exchangeRatesRoutes } from './routes/exchange-rates.js';
+import { reportsRoutes } from './routes/reports.js';
+import { dashboardRoutes } from './routes/dashboard.routes.js';
+import { syncRoutes } from './routes/sync.js';
 
 const buildApp = () => {
   const app = Fastify({
@@ -30,6 +30,19 @@ const buildApp = () => {
   app.register(cors, {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     credentials: true,
+  });
+
+  app.addHook('onSend', async (request, reply, payload) => {
+    const requestOrigin = request.headers.origin;
+    const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+
+    if (requestOrigin && requestOrigin === allowedOrigin) {
+      reply.header('Access-Control-Allow-Origin', requestOrigin);
+      reply.header('Access-Control-Allow-Credentials', 'true');
+      reply.header('Vary', 'Origin');
+    }
+
+    return payload;
   });
 
   app.register(helmet, {

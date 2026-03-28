@@ -7,12 +7,15 @@ export const useTheme = () => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Initialize from localStorage on mount
-    const stored = localStorage.getItem(THEME_KEY) as 'light' | 'dark' | null;
-    if (stored) {
-      setTheme(stored);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
+    try {
+      const stored = localStorage.getItem(THEME_KEY) as 'light' | 'dark' | null;
+      if (stored) {
+        setTheme(stored);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setTheme('dark');
+      }
+    } catch {
+      // Fall back to the default theme if storage is unavailable.
     }
     setIsLoaded(true);
   }, []);
@@ -20,8 +23,11 @@ export const useTheme = () => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    // Update localStorage and document class
-    localStorage.setItem(THEME_KEY, theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Ignore persistence failures and still apply the theme.
+    }
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme, isLoaded]);
 

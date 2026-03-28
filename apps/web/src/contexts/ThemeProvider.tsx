@@ -8,10 +8,6 @@ const ThemeContext = createContext<ReturnType<typeof useThemeHook> | null>(null)
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const themeState = useThemeHook();
 
-  if (!themeState.isLoaded) {
-    return <div className="min-h-screen bg-background" />;
-  }
-
   return (
     <ThemeContext.Provider value={themeState}>
       {children}

@@ -9,11 +9,14 @@ export const useLocale = () => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Initialize from localStorage on mount
-    const stored = localStorage.getItem(LOCALE_KEY) as 'en' | 'ar' | null;
-    if (stored) {
-      setLocale(stored);
-      setDirection(LOCALE_DIRS[stored]);
+    try {
+      const stored = localStorage.getItem(LOCALE_KEY) as 'en' | 'ar' | null;
+      if (stored) {
+        setLocale(stored);
+        setDirection(LOCALE_DIRS[stored]);
+      }
+    } catch {
+      // Fall back to the default locale if storage is unavailable.
     }
     setIsLoaded(true);
   }, []);
@@ -21,8 +24,11 @@ export const useLocale = () => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    // Update localStorage and document direction
-    localStorage.setItem(LOCALE_KEY, locale);
+    try {
+      localStorage.setItem(LOCALE_KEY, locale);
+    } catch {
+      // Ignore persistence failures and still apply the locale.
+    }
     setDirection(LOCALE_DIRS[locale]);
     document.documentElement.setAttribute('dir', LOCALE_DIRS[locale]);
     document.documentElement.setAttribute('lang', locale);

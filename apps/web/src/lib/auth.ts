@@ -72,6 +72,20 @@ export function getAuthToken(): string | null {
   return getAccessToken();
 }
 
+async function resolveAccessToken(): Promise<string | null> {
+  const existingToken = getAccessToken();
+  if (existingToken) {
+    return existingToken;
+  }
+
+  const refreshResult = await refreshToken();
+  if ('accessToken' in refreshResult) {
+    return refreshResult.accessToken;
+  }
+
+  return null;
+}
+
 /**
  * Get stored user data
  */
@@ -161,9 +175,6 @@ export async function refreshToken(): Promise<{ accessToken: string } | AuthErro
     const response = await fetch(`${API_BASE}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     });
 
     const data = await response.json();
@@ -192,7 +203,7 @@ export async function refreshToken(): Promise<{ accessToken: string } | AuthErro
  * Get current authenticated user from /api/auth/me
  */
 export async function getCurrentUser(): Promise<User | null> {
-  const token = getAccessToken();
+  const token = await resolveAccessToken();
   
   if (!token) {
     return null;
@@ -260,4 +271,42 @@ export function isAuthenticated(): boolean {
  */
 export function getTokenForRequest(): string | null {
   return getAccessToken();
+}
+
+export async function authenticatedFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {}
+): Promise<Response> {
+  const token = await resolveAccessToken();
+  const headers = new Headers(init.headers);
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  let response = await fetch(input, {
+    ...init,
+    credentials: init.credentials ?? 'include',
+    headers,
+  });
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  const refreshResult = await refreshToken();
+  if (!('accessToken' in refreshResult)) {
+    return response;
+  }
+
+  const retryHeaders = new Headers(init.headers);
+  retryHeaders.set('Authorization', `Bearer ${refreshResult.accessToken}`);
+
+  response = await fetch(input, {
+    ...init,
+    credentials: init.credentials ?? 'include',
+    headers: retryHeaders,
+  });
+
+  return response;
 }

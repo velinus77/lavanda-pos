@@ -25,15 +25,15 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon, color, alert, alertLabel }: StatCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm flex items-start gap-4">
-      <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
+    <div className="flex items-start gap-4 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <div className={`h-12 w-12 flex-shrink-0 rounded-2xl flex items-center justify-center ${color}`}>
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-0.5">{value}</p>
+        <p className="truncate text-sm text-[var(--muted)]">{label}</p>
+        <p className="mt-0.5 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{value}</p>
         {alert && (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">
+          <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#a06f23] dark:text-[#e3bc79]">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
@@ -94,8 +94,8 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">{t.loading}</p>
+          <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-[var(--accent)] border-t-transparent animate-spin" />
+          <p className="text-[var(--muted)]">{t.loading}</p>
         </div>
       </div>
     );
@@ -108,25 +108,24 @@ export default function DashboardPage() {
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Welcome banner */}
-      <div className="mb-8 overflow-hidden rounded-[28px] border border-emerald-100 bg-[linear-gradient(135deg,_rgba(255,255,255,0.94),_rgba(236,253,245,0.94))] p-6 shadow-lg shadow-emerald-100/50 dark:border-emerald-500/10 dark:bg-[linear-gradient(135deg,_rgba(15,23,42,0.9),_rgba(6,78,59,0.26))] dark:shadow-black/20">
+      <div className="mb-8 overflow-hidden rounded-[30px] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(255,253,248,0.98),rgba(242,237,229,0.92))] p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)] dark:bg-[linear-gradient(135deg,rgba(17,26,39,0.98),rgba(13,20,32,0.98))]">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300">
-              Daily summary
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+              Executive overview
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">{t.welcome}</h1>
-            <p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-300">{t.subtitle}</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">{t.welcome}</h1>
+            <p className="mt-2 max-w-2xl text-[var(--muted)]">{t.subtitle}</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-slate-950/30">
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Today</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">{salesTodayValue}</p>
+            <div className="rounded-[22px] border border-[var(--border)] bg-[var(--card)] px-4 py-3 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]">Today</p>
+              <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{salesTodayValue}</p>
             </div>
-            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-slate-950/30">
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Alerts</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+            <div className="rounded-[22px] border border-[var(--border)] bg-[var(--card)] px-4 py-3 shadow-sm">
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]">Alerts</p>
+              <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
                 {statsError ? '--' : (stats?.lowStock ?? 0) + (stats?.expiringSoon ?? 0)}
               </p>
             </div>
@@ -139,7 +138,7 @@ export default function DashboardPage() {
         <StatCard
           label={t.totalProducts}
           value={totalProductsValue}
-          color="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+          color="bg-[#e8edf5] text-[#35506f] dark:bg-[#1b2839] dark:text-[#9cb7d5]"
           alertLabel={t.needsAttention}
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +149,7 @@ export default function DashboardPage() {
         <StatCard
           label={t.lowStock}
           value={lowStockValue}
-          color="bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+          color="bg-[#f2e9d9] text-[#8d6526] dark:bg-[#352718] dark:text-[#e0ba79]"
           alert={!statsError && (stats?.lowStock ?? 0) > 0}
           alertLabel={t.needsAttention}
           icon={
@@ -162,7 +161,7 @@ export default function DashboardPage() {
         <StatCard
           label={t.expiringSoon}
           value={expiringSoonValue}
-          color="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+          color="bg-[#efe0dd] text-[#8c4d40] dark:bg-[#351c1b] dark:text-[#e6a59a]"
           alert={!statsError && (stats?.expiringSoon ?? 0) > 0}
           alertLabel={t.needsAttention}
           icon={
@@ -174,7 +173,7 @@ export default function DashboardPage() {
         <StatCard
           label={t.salesToday}
           value={salesTodayValue}
-          color="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+          color="bg-[#e4ece4] text-[#46614e] dark:bg-[#1a2921] dark:text-[#9cc0a2]"
           alertLabel={t.needsAttention}
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,48 +183,43 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Quick links */}
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.quickLinks}</h2>
+        <h2 className="mb-4 text-lg font-semibold tracking-[-0.02em] text-[var(--foreground)]">{t.quickLinks}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {/* POS quick link */}
-          <a href="/dashboard/pos" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex flex-col items-center gap-3 hover:border-green-400 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 bg-green-50 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:bg-green-100 dark:group-hover:bg-green-900/50 transition-colors">
-              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <a href="/dashboard/pos" className="group flex flex-col items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-5 transition-all hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e4ece4] text-[#46614e] transition-colors group-hover:bg-[#dce7dc] dark:bg-[#1a2921] dark:text-[#9cc0a2]">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.goToPOS}</span>
+            <span className="text-center text-sm font-medium text-[var(--foreground)]">{t.goToPOS}</span>
           </a>
 
-          {/* Sales */}
-          <a href="/dashboard/sales" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex flex-col items-center gap-3 hover:border-green-400 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
-              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <a href="/dashboard/sales" className="group flex flex-col items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-5 transition-all hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e8edf5] text-[#35506f] transition-colors group-hover:bg-[#dde6f2] dark:bg-[#1b2839] dark:text-[#9cb7d5]">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.viewSales}</span>
+            <span className="text-center text-sm font-medium text-[var(--foreground)]">{t.viewSales}</span>
           </a>
 
-          {/* Inventory */}
-          <a href="/dashboard/products" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex flex-col items-center gap-3 hover:border-green-400 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 rounded-lg flex items-center justify-center group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors">
-              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <a href="/dashboard/products" className="group flex flex-col items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-5 transition-all hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ece7dd] text-[#66573f] transition-colors group-hover:bg-[#e6dfd2] dark:bg-[#2a241c] dark:text-[#d0c0a0]">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.manageInventory}</span>
+            <span className="text-center text-sm font-medium text-[var(--foreground)]">{t.manageInventory}</span>
           </a>
 
-          {/* Suppliers */}
-          <a href="/dashboard/suppliers" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex flex-col items-center gap-3 hover:border-green-400 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 bg-cyan-50 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/50 transition-colors">
-              <svg className="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <a href="/dashboard/suppliers" className="group flex flex-col items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-5 transition-all hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e5ebea] text-[#3f5d5d] transition-colors group-hover:bg-[#dbe5e3] dark:bg-[#182526] dark:text-[#96b7b8]">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.suppliers}</span>
+            <span className="text-center text-sm font-medium text-[var(--foreground)]">{t.suppliers}</span>
           </a>
         </div>
       </div>

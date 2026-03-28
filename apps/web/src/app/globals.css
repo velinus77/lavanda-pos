@@ -1,150 +1,98 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Lavanda Pharmacy POS - Custom Theme */
-
-@theme inline {
-  /* Primary - Lavanda Purple */
-  --color-primary-50: #f5f3ff;
-  --color-primary-100: #ede9fe;
-  --color-primary-200: #ddd6fe;
-  --color-primary-300: #c4b5fd;
-  --color-primary-400: #a78bfa;
-  --color-primary-500: #8b5cf6;
-  --color-primary-600: #7c3aed;
-  --color-primary-700: #6d28d9;
-  --color-primary-800: #5b21b6;
-  --color-primary-900: #4c1d95;
-
-  /* Secondary - Soft Teal */
-  --color-secondary-50: #f0fdfa;
-  --color-secondary-100: #ccfbf1;
-  --color-secondary-200: #99f6e4;
-  --color-secondary-300: #5eead4;
-  --color-secondary-400: #2dd4bf;
-  --color-secondary-500: #14b8a6;
-  --color-secondary-600: #0d9488;
-  --color-secondary-700: #0f766e;
-  --color-secondary-800: #115e59;
-  --color-secondary-900: #134e4a;
-
-  /* Danger */
-  --color-danger-50: #fef2f2;
-  --color-danger-100: #fee2e2;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
-  --color-danger-700: #b91c1c;
-
-  /* Success */
-  --color-success-50: #f0fdf4;
-  --color-success-100: #dcfce7;
-  --color-success-500: #22c55e;
-  --color-success-600: #16a34a;
-  --color-success-700: #15803d;
-
-  /* Warning */
-  --color-warning-50: #fffbeb;
-  --color-warning-100: #fef3c7;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
-
-  /* Neutral */
-  --color-border: #e5e7eb;
-  --color-muted: #6b7280;
-  --color-muted-foreground: #9ca3af;
-  --color-accent: #f3f4f6;
-  --color-accent-foreground: #1f2937;
-
-  /* Dark mode colors */
-  --color-dark-bg: #0f172a;
-  --color-dark-card: #1e293b;
-  --color-dark-border: #334155;
-}
-
-/* Light mode (default) */
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #7c3aed;
+  --background: #f4f1eb;
+  --foreground: #162033;
+  --card: #fffdf8;
+  --card-foreground: #162033;
+  --border: #d5d0c6;
+  --input: #d9d3c8;
+  --ring: #9c7a45;
+  --muted: #6a7486;
+  --surface: #f8f5ef;
+  --surface-strong: #ebe4d8;
+  --accent: #9c7a45;
+  --accent-strong: #7e6033;
+  --sidebar: #121a28;
+  --sidebar-foreground: #f5efe5;
 }
 
-/* Dark mode */
 .dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --border: #334155;
-  --input: #334155;
-  --ring: #8b5cf6;
+  --background: #0d1420;
+  --foreground: #f4ede2;
+  --card: #111a27;
+  --card-foreground: #f4ede2;
+  --border: #253144;
+  --input: #293446;
+  --ring: #b8945a;
+  --muted: #94a0b4;
+  --surface: #111a27;
+  --surface-strong: #1a2434;
+  --accent: #b8945a;
+  --accent-strong: #d2ae71;
+  --sidebar: #09111d;
+  --sidebar-foreground: #f3eadf;
 }
 
-/* Base styles */
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background: var(--background);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), 'Segoe UI', sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  html[lang='ar'] body {
+    font-family: var(--font-arabic), 'Segoe UI', sans-serif;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+  }
 }
 
-/* RTL support */
-[dir="rtl"] {
-  text-align: right;
+@layer utilities {
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--surface-strong) 50%, transparent);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--muted-foreground);
+  background: color-mix(in srgb, var(--accent) 70%, #6f7682 30%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
-}
-
-/* Focus styles */
-*:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-/* Smooth transitions */
-* {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-/* Blob animation for login page */
-@keyframes blob {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(10px, -20px) scale(1.1);
-  }
-  66% {
-    transform: translate(-10px, 10px) scale(0.9);
-  }
-}
-.animate-blob {
-  animation: blob 7s infinite;
-}
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-.animation-delay-4000 {
-  animation-delay: 4s;
+  background: var(--accent-strong);
 }
