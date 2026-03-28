@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
+import { getAuthToken } from '@/lib/auth';
 
 interface Supplier {
   id: number;
@@ -127,7 +128,7 @@ export interface SupplierManagerProps {
 export const SupplierManager: React.FC<SupplierManagerProps> = ({
   locale = 'en',
   theme = 'light',
-  apiUrl = '/api/suppliers',
+  apiUrl = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/suppliers`,
 }) => {
   const t = translations[locale];
   const isRTL = locale === 'ar';
@@ -158,14 +159,20 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getAuthHeaders = useCallback(() => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, []);
+
   const fetchSuppliers = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await fetch(apiUrl, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
       
       if (!response.ok) {
@@ -173,13 +180,13 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
       }
       
       const data = await response.json();
-      setSuppliers(data);
+      setSuppliers(Array.isArray(data) ? data : data.suppliers ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.fetchError);
     } finally {
       setIsLoading(false);
     }
-  }, [apiUrl, t.fetchError]);
+  }, [apiUrl, getAuthHeaders, t.fetchError]);
 
   useEffect(() => {
     fetchSuppliers();
@@ -246,7 +253,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -258,9 +265,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
 
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(formData),
       });
 
@@ -277,15 +282,16 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [apiUrl, fetchSuppliers, formData, getAuthHeaders, selectedSupplier, t.saveError]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!selectedSupplier) return;
 
     setIsSubmitting(true);
     try {
       const response = await fetch(`${apiUrl}/${selectedSupplier.id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -300,17 +306,14 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [apiUrl, fetchSuppliers, getAuthHeaders, selectedSupplier, t.deleteError]);
 
-  const handleToggleActive = async (supplier: Supplier) => {
+  const handleToggleActive = useCallback(async (supplier: Supplier) => {
     try {
       const response = await fetch(`${apiUrl}/${supplier.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
-          ...supplier,
           is_active: !supplier.is_active,
         }),
       });
@@ -323,7 +326,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
     } catch (err) {
       setError(err instanceof Error ? err.message : t.saveError);
     }
-  };
+  }, [apiUrl, fetchSuppliers, getAuthHeaders, t.saveError]);
 
   const inputClasses = `w-full px-4 py-2.5 rounded-lg border transition-all outline-none ${
     theme === 'dark'
