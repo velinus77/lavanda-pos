@@ -35,7 +35,8 @@ const updateProductSchema = z.object({
   unit: z.string().optional(),
   min_stock_level: z.number().int().nonnegative().optional(),
   max_stock_level: z.number().int().positive().optional().nullable(),
-  is_controlled: z.boolean().optional()
+  is_controlled: z.boolean().optional(),
+  is_active: z.boolean().optional()
 });
 
 const paginationQuerySchema = z.object({
@@ -43,7 +44,8 @@ const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   search: z.string().optional(),
   barcode: z.string().optional(),
-  category_id: z.string().optional()
+  category_id: z.string().optional(),
+  include_inactive: z.coerce.boolean().optional().default(false)
 });
 
 const createBatchSchema = z.object({
@@ -105,7 +107,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const rawQuery = request.query as Record<string, any>;
       const validatedQuery = paginationQuerySchema.parse(rawQuery);
-      const { page, limit, search, barcode, category_id } = validatedQuery;
+      const { page, limit, search, barcode, category_id, include_inactive } = validatedQuery;
       
       const offset = (page - 1) * limit;
 
@@ -125,11 +127,15 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN suppliers s ON p.supplier_id = s.id
         LEFT JOIN product_batches pb ON p.id = pb.product_id AND pb.is_active = 1
-        WHERE p.is_active = 1
+        WHERE 1 = 1
       `;
       
       const queryParams: unknown[] = [];
       const whereConditions: string[] = [];
+
+      if (!include_inactive) {
+        whereConditions.push('p.is_active = 1');
+      }
 
       // Apply filters
       if (search) {
@@ -163,9 +169,13 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       let countQuery = `
         SELECT COUNT(DISTINCT p.id) as total
         FROM products p
-        WHERE p.is_active = 1
+        WHERE 1 = 1
       `;
       const countParams: unknown[] = [];
+
+      if (!include_inactive) {
+        countQuery += ' AND p.is_active = 1';
+      }
 
       if (search) {
         countQuery += ` AND (p.name LIKE $${countParams.length + 1} OR p.name_ar LIKE $${countParams.length + 1} OR p.barcode LIKE $${countParams.length + 1})`;
@@ -396,13 +406,13 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         category_id, supplier_id,
         cost_price, selling_price, min_selling_price,
         tax_rate, unit, min_stock_level, max_stock_level,
-        is_controlled
+        is_controlled, is_active
       } = validatedData;
 
       // Check if product exists
       const existingProduct = await queryDatabase(
         fastify,
-        'SELECT id, barcode FROM products WHERE id = $1 AND is_active = 1',
+        'SELECT id, barcode FROM products WHERE id = $1',
         [id]
       );
 
@@ -523,6 +533,10 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
         updates.push(`is_controlled = $${paramIndex++}`);
         values.push(is_controlled ? 1 : 0);
       }
+      if (is_active !== undefined) {
+        updates.push(`is_active = $${paramIndex++}`);
+        values.push(is_active ? 1 : 0);
+      }
 
       const now = Math.floor(Date.now() / 1000);
       updates.push(`updated_at = $${paramIndex++}`);
@@ -533,7 +547,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       const query = `
         UPDATE products 
         SET ${updates.join(', ')}
-        WHERE id = $${paramIndex} AND is_active = 1
+        WHERE id = $${paramIndex}
         RETURNING *
       `;
 

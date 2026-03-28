@@ -64,8 +64,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       if (isLocked(email)) {
         const lockTime = getLockTimeRemaining(email);
         return reply.code(423).send({
+          code: 'account_locked',
           error: 'Locked',
           message: `Too many failed login attempts. Try again in ${lockTime} seconds.`,
+          lockUntil: new Date(Date.now() + lockTime * 1000).toISOString(),
           lockTimeRemaining: lockTime,
         });
       }
@@ -80,7 +82,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
         if (result.length === 0) {
           recordFailedAttempt(email);
-          return reply.code(401).send({ error: 'Unauthorized', message: 'Invalid email or password' });
+          return reply.code(401).send({
+            code: 'invalid_credentials',
+            error: 'Unauthorized',
+            message: 'Invalid email or password',
+          });
         }
         user = result[0];
       } catch (dbError) {
@@ -95,7 +101,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       const isValid = await verifyPassword(password, user.passwordHash);
       if (!isValid) {
         recordFailedAttempt(email);
-        return reply.code(401).send({ error: 'Unauthorized', message: 'Invalid email or password' });
+        return reply.code(401).send({
+          code: 'invalid_credentials',
+          error: 'Unauthorized',
+          message: 'Invalid email or password',
+        });
       }
 
       resetAttempts(email);

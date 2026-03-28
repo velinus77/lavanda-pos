@@ -103,7 +103,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     const data = await response.json();
 
     if (!response.ok) {
-      if (data.code === 'account_locked') {
+      if (data.code === 'account_locked' || response.status === 423) {
         return {
           message: data.message || 'Account is temporarily locked due to too many failed attempts',
           code: 'account_locked',

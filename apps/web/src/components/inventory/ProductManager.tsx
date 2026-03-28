@@ -409,7 +409,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch(apiUrl, {
+      const response = await fetch(`${apiUrl}?include_inactive=true`, {
         headers: getAuthHeaders(),
       });
 
@@ -592,6 +592,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           selling_price: formData.sale_price,
           min_stock_level: formData.min_stock_quantity,
           is_controlled: formData.is_controlled,
+          is_active: formData.is_active,
         }),
       });
 
