@@ -122,6 +122,17 @@ async function seed() {
       console.log('  • Admin user exists');
     }
     
+    await db
+      .update(schema.users)
+      .set({
+        email: 'admin@lavanda-pos.localhost',
+        passwordHash: await hashPassword('admin123'),
+        fullName: 'System Administrator',
+        roleId: 'role_admin',
+        isActive: true,
+      })
+      .where(eq(schema.users.username, 'admin'));
+
     // ============== SEED CATEGORIES ==============
     console.log('\n📂 Seeding pharmacy categories...');
     

@@ -13,6 +13,30 @@ export interface AuthPluginOptions {
 
 const defaultSkipPaths = ['/health'];
 
+function hydrateUserFromHeader(request: FastifyRequest): TokenPayload | undefined {
+  if (request.user) {
+    return request.user;
+  }
+
+  const authHeader = request.headers.authorization;
+  if (!authHeader) {
+    return undefined;
+  }
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return undefined;
+  }
+
+  try {
+    const payload = verifyAccessToken(parts[1]);
+    request.user = payload;
+    return payload;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Fastify plugin for authentication
  * - Decorates request with user property
@@ -21,11 +45,13 @@ const defaultSkipPaths = ['/health'];
 export const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, options) => {
   const skipPaths = options.skipPaths || defaultSkipPaths;
 
-  // Decorate request with user property using getter/setter to satisfy Fastify 5 types
   fastify.decorateRequest('user', {
-    getter() {
-      return undefined;
-    }
+    getter(this: FastifyRequest & { _user?: TokenPayload }) {
+      return this._user;
+    },
+    setter(this: FastifyRequest & { _user?: TokenPayload }, value: TokenPayload | undefined) {
+      this._user = value;
+    },
   });
 
   // Add onRequest hook to verify JWT from Authorization header
@@ -67,7 +93,7 @@ export const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify,
  * Use this when you want to enforce authentication on specific routes
  */
 export async function requireAuth(request: FastifyRequest, reply: { code: (n: number) => { send: (o: unknown) => void } }) {
-  if (!request.user) {
+  if (!hydrateUserFromHeader(request)) {
     return reply.code(401).send({
       error: 'Unauthorized',
       message: 'Authentication required'
@@ -80,14 +106,16 @@ export async function requireAuth(request: FastifyRequest, reply: { code: (n: nu
  */
 export function requireRole(...allowedRoles: string[]) {
   return async (request: FastifyRequest, reply: { code: (n: number) => { send: (o: unknown) => void } }) => {
-    if (!request.user) {
+    const user = hydrateUserFromHeader(request);
+
+    if (!user) {
       return reply.code(401).send({
         error: 'Unauthorized',
         message: 'Authentication required'
       });
     }
 
-    if (!allowedRoles.includes(request.user.role)) {
+    if (!allowedRoles.includes(user.role)) {
       return reply.code(403).send({
         error: 'Forbidden',
         message: 'Insufficient permissions'

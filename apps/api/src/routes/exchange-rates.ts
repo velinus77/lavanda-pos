@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { db } from '@lavanda/db';
+import crypto from 'node:crypto';
+import { getRawClient } from '@lavanda/db';
 import { requireAuth, requireRole } from '../plugins/auth.js';
 import { writeAuditLog } from '../services/audit.service.js';
 
@@ -10,12 +11,13 @@ export const exchangeRatesRoutes: FastifyPluginAsync = async (fastify: FastifyIn
    */
   fastify.get('/', { preHandler: [requireAuth] }, async (request, reply) => {
     try {
-      const rows = await db.all(
+      const sqlite = getRawClient();
+      const rows = sqlite.prepare(
         `SELECT er.*, u.full_name as created_by_name
          FROM exchange_rates er
          LEFT JOIN users u ON er.created_by = u.id
          ORDER BY er.created_at DESC`
-      );
+      ).all();
       return reply.code(200).send({ data: rows });
     } catch (error) {
       fastify.log.error({ err: error }, 'List exchange rates error');
@@ -38,14 +40,14 @@ export const exchangeRatesRoutes: FastifyPluginAsync = async (fastify: FastifyIn
       const id = crypto.randomUUID();
       const userId = (request as any).user?.userId ?? null;
       const effDate = effective_date || new Date().toISOString().split('T')[0];
+      const sqlite = getRawClient();
 
-      await db.run(
+      sqlite.prepare(
         `INSERT INTO exchange_rates (id, from_currency, to_currency, rate, effective_date, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
-        [id, from_currency, to_currency, parseFloat(rate), effDate, userId]
-      );
+         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+      ).run(id, from_currency, to_currency, parseFloat(rate), effDate, userId);
 
-      const created = await db.get(`SELECT * FROM exchange_rates WHERE id = ?`, [id]);
+      const created = sqlite.prepare(`SELECT * FROM exchange_rates WHERE id = ?`).get(id);
 
       await writeAuditLog(fastify, {
         userId,
@@ -71,13 +73,14 @@ export const exchangeRatesRoutes: FastifyPluginAsync = async (fastify: FastifyIn
     try {
       const { id } = request.params as { id: string };
       const userId = (request as any).user?.userId ?? null;
+      const sqlite = getRawClient();
 
-      const existing = await db.get(`SELECT id FROM exchange_rates WHERE id = ?`, [id]);
+      const existing = sqlite.prepare(`SELECT id FROM exchange_rates WHERE id = ?`).get(id);
       if (!existing) {
         return reply.code(404).send({ error: 'Not Found', message: 'Exchange rate not found' });
       }
 
-      await db.run(`DELETE FROM exchange_rates WHERE id = ?`, [id]);
+      sqlite.prepare(`DELETE FROM exchange_rates WHERE id = ?`).run(id);
 
       await writeAuditLog(fastify, {
         userId,

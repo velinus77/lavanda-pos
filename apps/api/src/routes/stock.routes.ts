@@ -4,7 +4,6 @@ import { z } from 'zod';
 import {
   selectBatchesForSale,
   getTotalQuantity,
-  getExpiryStatus,
   stockAdjustmentSchema,
   movementQuerySchema,
   generateMovementId,
@@ -34,8 +33,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         const validatedData = stockAdjustmentSchema.parse(request.body);
         const { product_id, batch_id, quantity, reason, reference_id } = validatedData;
 
-        // @ts-ignore
-        const userId: string = request.user?.id ?? request.user?.userId;
+        const userId = request.user!.userId;
 
         // Verify product exists
         const [product] = await db
@@ -249,8 +247,7 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
         const validatedData = disposeExpiredSchema.parse(request.body);
         const { batch_ids, reason } = validatedData;
 
-        // @ts-ignore
-        const userId: string = request.user?.id ?? request.user?.userId;
+        const userId = request.user!.userId;
         const now = new Date();
         const disposed: string[] = [];
         const skipped: { id: string; reason: string }[] = [];

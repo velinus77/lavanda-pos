@@ -69,7 +69,7 @@ The system uses a **local-first architecture** with SQLite database, making it s
 ## Quick Start
 
 ### Prerequisites
-- Node.js >= 20.0.0
+- Node.js 22.x recommended
 - npm or pnpm (pnpm recommended for workspaces)
 
 ### Installation
@@ -112,19 +112,24 @@ npm run build:api  # Build api only
 
 ### Environment Variables
 
-Create `.env` in `apps/api/`:
+Copy `apps/api/.env.example` to `apps/api/.env` and `apps/web/.env.example` to `apps/web/.env`.
 
 ```bash
-# JWT Secrets (required)
-ACCESS_TOKEN_SECRET=your-super-secret-access-key-min-32-chars
-REFRESH_TOKEN_SECRET=your-super-secret-refresh-key-min-32-chars
-
-# Server
+# API server
+NODE_ENV=development
 PORT=3001
 HOST=0.0.0.0
+LOG_LEVEL=info
 
-# Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:3000
+# Auth secrets
+ACCESS_TOKEN_SECRET=your-super-secret-access-key-min-32-chars
+REFRESH_TOKEN_SECRET=your-super-secret-refresh-key-min-32-chars
+ACCESS_TOKEN_EXPIRY=15m
+REFRESH_TOKEN_EXPIRY=7d
+
+# CORS + DB
+CORS_ORIGIN=http://localhost:3000
+DATABASE_PATH=../../packages/data/lavanda.db
 ```
 
 ---
@@ -145,7 +150,7 @@ Base URL: `http://localhost:3001/api`
 **Login Request:**
 ```json
 {
-  "email": "admin@lavanda.com",
+  "email": "admin",
   "password": "admin123"
 }
 ```
@@ -156,7 +161,7 @@ Base URL: `http://localhost:3001/api`
   "user": {
     "id": 1,
     "full_name": "Admin User",
-    "email": "admin@lavanda.com",
+    "email": "admin@lavanda-pos.localhost",
     "role": "admin",
     "preferences": { "language": "en", "theme": "light" }
   },
@@ -358,9 +363,7 @@ After running `npm run db:seed`, use these credentials:
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | `admin@lavanda.com` | `admin123` |
-| Manager | `manager@lavanda.com` | `manager123` |
-| Cashier | `cashier@lavanda.com` | `cashier123` |
+| Admin | `admin` or `admin@lavanda-pos.localhost` | `admin123` |
 
 ---
 
@@ -541,6 +544,7 @@ FRONTEND_URL=http://localhost:3000
 - Login rate limiting is in-memory only (resets on restart); use Redis for production
 - SQLite is used for simplicity; migrate to PostgreSQL for production workloads
 - Receipt printing is schema-ready but not yet wired to a full print service
+- Several UI inventory screens still carry lint warnings and legacy response-shape assumptions, but the core API flows and build gates now pass cleanly
 
 ---
 

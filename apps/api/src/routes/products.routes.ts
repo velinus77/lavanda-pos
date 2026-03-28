@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import { getRawClient } from '@lavanda/db';
 import { requireAuth, requireRole } from '../plugins/auth.js';
 import { z } from 'zod';
 
@@ -69,11 +70,17 @@ async function queryDatabase(
   query: string,
   values: unknown[]
 ): Promise<{ rows: unknown[] }> {
-  const db = fastify.db || fastify.pg;
-  if (!db) {
-    throw new Error('Database not configured');
+  void fastify;
+  const sqlite = getRawClient();
+  const normalizedQuery = query.replace(/\$\d+/g, '?');
+  const statement = sqlite.prepare(normalizedQuery);
+
+  if (/^\s*(insert|update|delete)/i.test(normalizedQuery) && !/\breturning\b/i.test(normalizedQuery)) {
+    statement.run(...values);
+    return { rows: [] };
   }
-  return db.query(query, values);
+
+  return { rows: statement.all(...values) as unknown[] };
 }
 
 /**

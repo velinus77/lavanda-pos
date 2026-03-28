@@ -60,6 +60,10 @@ function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
+export function getAuthToken(): string | null {
+  return getAccessToken();
+}
+
 /**
  * Get stored refresh token
  */
