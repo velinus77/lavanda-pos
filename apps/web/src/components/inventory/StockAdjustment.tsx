@@ -159,60 +159,60 @@ const translations: Record<'ar' | 'en', Translations> = {
     },
   },
   ar: {
-    title: '-?? --?',
-    description: '-?? --? --? --?? ?? -? --?',
-    productLabel: '-- *',
-    batchLabel: '-- *',
-    selectProduct: '-? --',
-    selectBatch: '-? -?',
-    adjustmentTypeLabel: '- --? *',
-    quantityLabel: '-- *',
-    reasonLabel: '-??',
-    reasonPlaceholder: '-? --?? ?? --? --? --? --?',
-    previewButton: '-- --?',
-    submitButton: '-?? --?',
-    cancelButton: '-??',
-    submitLoading: '-? --??...',
-    previewTitle: '-?? --?',
-    confirmButton: '-?? --',
-    closePreviewButton: '-- --?',
-    noBatches: '?? -? -?? -?? -? --',
-    fefoSuggestion: 'FEFO: -? --? -- -- --?',
-    expiredWarning: '- -- --',
-    lowStockWarning: '-??: -?? -??',
+    title: 'تعديل المخزون',
+    description: 'تعديل مستويات المخزون للمنتجات مع تتبع الدفعات',
+    productLabel: 'المنتج *',
+    batchLabel: 'الدفعة *',
+    selectProduct: 'اختر منتجاً',
+    selectBatch: 'اختر دفعة',
+    adjustmentTypeLabel: 'نوع التعديل *',
+    quantityLabel: 'الكمية *',
+    reasonLabel: 'السبب',
+    reasonPlaceholder: 'يملأ تلقائياً من العملية والمنتج والدفعة المحددة',
+    previewButton: 'معاينة التعديل',
+    submitButton: 'إرسال التعديل',
+    cancelButton: 'إلغاء',
+    submitLoading: 'جارٍ المعالجة...',
+    previewTitle: 'تأكيد التعديل',
+    confirmButton: 'تأكيد وإرسال',
+    closePreviewButton: 'العودة للتحرير',
+    noBatches: 'لا توجد دفعات متاحة لهذا المنتج',
+    fefoSuggestion: 'FEFO: يوصى باختيار الدفعة الأقرب انتهاءً',
+    expiredWarning: 'هذه الدفعة منتهية',
+    lowStockWarning: 'تحذير: مخزون منخفض',
     adjustmentTypes: {
-      add: '-?? -??',
-      remove: '-?? -??',
-      return: '-?? --?',
-      dispose: '- ?? -??',
+      add: 'إضافة مخزون',
+      remove: 'إزالة مخزون',
+      return: 'إرجاع للمخزون',
+      dispose: 'تلف أو إعدام',
     },
     adjustmentTypeDescriptions: {
-      add: '-?? -?? -? ?? -? ?? --',
-      remove: '-?? -?? -? -?? ?? -??',
-      return: '-?? -?? - --?',
-      dispose: '-- ?? --? -? -?? ?? --??',
+      add: 'إضافة مخزون جديد من شراء أو استلام',
+      remove: 'إزالة مخزون بسبب فقدان أو تصحيح',
+      return: 'إرجاع عناصر إلى المخزون',
+      dispose: 'التخلص من المخزون بسبب التلف أو الانتهاء',
     },
     previewFields: {
-      product: '--',
-      batch: '- --',
-      type: '- --?',
-      previousQty: '-- --?',
-      change: '--?',
-      newQty: '-- --?',
-      reason: '-??',
-      valueImpact: '-?? --',
+      product: 'المنتج',
+      batch: 'رقم الدفعة',
+      type: 'نوع التعديل',
+      previousQty: 'الكمية السابقة',
+      change: 'التغيير',
+      newQty: 'الكمية الجديدة',
+      reason: 'السبب',
+      valueImpact: 'تأثير القيمة',
     },
     errors: {
-      productRequired: '-- -- -?',
-      batchRequired: '-- -- -?',
-      quantityRequired: '-- -?? --',
-      quantityInvalid: '- ?? -? -- -?? --',
-      reasonRequired: '-- -?? -',
-      submitFailed: '- -?? --?',
-      fetchFailed: '- -?? --??',
+      productRequired: 'الرجاء اختيار منتج',
+      batchRequired: 'الرجاء اختيار دفعة',
+      quantityRequired: 'الرجاء إدخال الكمية',
+      quantityInvalid: 'يجب أن تكون الكمية رقماً موجباً',
+      reasonRequired: 'الرجاء إدخال سبب',
+      submitFailed: 'فشل إنشاء التعديل',
+      fetchFailed: 'فشل تحميل المنتجات',
     },
     success: {
-      adjustmentCreated: '?? -?? -?? --? -??',
+      adjustmentCreated: 'تم إنشاء تعديل المخزون بنجاح',
     },
   },
 };
@@ -386,10 +386,10 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 
     if (locale === 'ar') {
       if (productName && batchNumber) {
-        return `${t.adjustmentTypes[adjustmentType]} ?????? ${productName} - ???? ${batchNumber}`;
+        return `${t.adjustmentTypes[adjustmentType]} للمنتج ${productName} - دفعة ${batchNumber}`;
       }
       if (productName) {
-        return `${t.adjustmentTypes[adjustmentType]} ?????? ${productName}`;
+        return `${t.adjustmentTypes[adjustmentType]} للمنتج ${productName}`;
       }
       return t.adjustmentTypes[adjustmentType];
     }
@@ -1037,5 +1037,4 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 };
 
 export default StockAdjustment;
-
 
