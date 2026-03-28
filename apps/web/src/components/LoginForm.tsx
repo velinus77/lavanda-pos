@@ -202,14 +202,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   };
 
   return (
-    <div
-      className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-purple-50 to-blue-50'
-      }`}
-    >
+    <div className="flex items-center justify-center p-1 transition-colors duration-300">
       <div
-        className={`w-full max-w-md p-8 rounded-2xl shadow-xl transition-all duration-300 ${
-          theme === 'dark' ? 'bg-gray-800 shadow-gray-900/50' : 'bg-white shadow-purple-200/50'
+        className={`w-full max-w-md rounded-[28px] border p-8 shadow-2xl transition-all duration-300 ${
+          theme === 'dark'
+            ? 'border-white/10 bg-slate-900/85 shadow-black/25'
+            : 'border-white/70 bg-white/90 shadow-emerald-100/70'
         }`}
       >
         <div className="flex justify-between items-center mb-6">
@@ -218,8 +216,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onClick={toggleLocale}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               theme === 'dark'
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
             aria-label={t.languageSwitch}
           >
@@ -239,8 +237,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onClick={toggleTheme}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               theme === 'dark'
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
             aria-label={theme === 'dark' ? t.lightMode : t.darkMode}
           >
@@ -271,7 +269,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <h1 className={`text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             {t.title}
           </h1>
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>{t.subtitle}</p>
+          <p className={theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}>{t.subtitle}</p>
         </div>
 
         {error && (
@@ -320,8 +318,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               placeholder={t.emailPlaceholder}
               className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                 theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
+                  ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20'
+                  : 'bg-white border-slate-300 text-gray-900 placeholder-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
               } ${error && !email ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
               autoComplete="username"
             />
@@ -345,8 +343,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               placeholder={t.passwordPlaceholder}
               className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                 theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
+                  ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20'
+                  : 'bg-white border-slate-300 text-gray-900 placeholder-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
               } ${error && !password ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
               autoComplete="current-password"
             />
@@ -361,8 +359,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 disabled={isLoading}
                 className={`w-4 h-4 rounded border transition-colors ${
                   theme === 'dark'
-                    ? 'border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500/20'
-                    : 'border-gray-300 bg-white text-purple-600 focus:ring-purple-500/20'
+                    ? 'border-slate-600 bg-slate-800 text-emerald-400 focus:ring-emerald-500/20'
+                    : 'border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500/20'
                 } disabled:opacity-50`}
               />
               <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -373,8 +371,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               type="button"
               className={`text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'text-purple-400 hover:text-purple-300'
-                  : 'text-purple-600 hover:text-purple-700'
+                  ? 'text-emerald-400 hover:text-emerald-300'
+                  : 'text-emerald-700 hover:text-emerald-800'
               }`}
             >
               {t.forgotPassword}
@@ -386,8 +384,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             disabled={isLoading}
             className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all transform ${
               isLoading
-                ? 'bg-purple-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl'
+                ? 'bg-emerald-300 cursor-not-allowed'
+                : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-500/20 hover:shadow-xl'
             }`}
           >
             {isLoading ? (

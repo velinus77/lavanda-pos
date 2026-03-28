@@ -87,7 +87,7 @@ export default function DashboardPage() {
     goToPOS: isRTL ? '\u0627\u0644\u0630\u0647\u0627\u0628 \u0625\u0644\u0649 \u0646\u0642\u0637\u0629 \u0627\u0644\u0628\u064A\u0639' : 'Go to POS',
     viewSales: isRTL ? '\u0639\u0631\u0636 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A' : 'View Sales',
     manageInventory: isRTL ? '\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646' : 'Manage Inventory',
-    reports: isRTL ? '\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631' : 'Reports',
+    suppliers: isRTL ? '\u0627\u0644\u0645\u0648\u0631\u062F\u0648\u0646' : 'Suppliers',
   };
 
   if (loading) {
@@ -101,17 +101,37 @@ export default function DashboardPage() {
     );
   }
 
-  const totalProductsValue = statsError ? '\u2014' : (stats?.totalProducts ?? 0);
-  const lowStockValue = statsError ? '\u2014' : (stats?.lowStock ?? 0);
-  const expiringSoonValue = statsError ? '\u2014' : (stats?.expiringSoon ?? 0);
-  const salesTodayValue = statsError ? '\u2014' : `${(stats?.totalSalesToday ?? 0).toFixed(2)} EGP`;
+  const totalProductsValue = statsError ? '--' : (stats?.totalProducts ?? 0);
+  const lowStockValue = statsError ? '--' : (stats?.lowStock ?? 0);
+  const expiringSoonValue = statsError ? '--' : (stats?.expiringSoon ?? 0);
+  const salesTodayValue = statsError ? '--' : `${(stats?.totalSalesToday ?? 0).toFixed(2)} EGP`;
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Welcome banner */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.welcome}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">{t.subtitle}</p>
+      <div className="mb-8 overflow-hidden rounded-[28px] border border-emerald-100 bg-[linear-gradient(135deg,_rgba(255,255,255,0.94),_rgba(236,253,245,0.94))] p-6 shadow-lg shadow-emerald-100/50 dark:border-emerald-500/10 dark:bg-[linear-gradient(135deg,_rgba(15,23,42,0.9),_rgba(6,78,59,0.26))] dark:shadow-black/20">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300">
+              Daily summary
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">{t.welcome}</h1>
+            <p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-300">{t.subtitle}</p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-slate-950/30">
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Today</p>
+              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">{salesTodayValue}</p>
+            </div>
+            <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 shadow-sm dark:border-white/10 dark:bg-slate-950/30">
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Alerts</p>
+              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                {statsError ? '--' : (stats?.lowStock ?? 0) + (stats?.expiringSoon ?? 0)}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats grid */}
@@ -168,7 +188,7 @@ export default function DashboardPage() {
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.quickLinks}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {/* POS — correct shopping cart icon */}
+          {/* POS quick link */}
           <a href="/dashboard/pos" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex flex-col items-center gap-3 hover:border-green-400 hover:shadow-md transition-all group">
             <div className="w-12 h-12 bg-green-50 dark:bg-green-900/30 rounded-lg flex items-center justify-center group-hover:bg-green-100 dark:group-hover:bg-green-900/50 transition-colors">
               <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,14 +218,14 @@ export default function DashboardPage() {
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.manageInventory}</span>
           </a>
 
-          {/* Reports */}
-          <a href="/dashboard/reports" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex flex-col items-center gap-3 hover:border-green-400 hover:shadow-md transition-all group">
-            <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/30 rounded-lg flex items-center justify-center group-hover:bg-rose-100 dark:group-hover:bg-rose-900/50 transition-colors">
-              <svg className="w-6 h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          {/* Suppliers */}
+          <a href="/dashboard/suppliers" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex flex-col items-center gap-3 hover:border-green-400 hover:shadow-md transition-all group">
+            <div className="w-12 h-12 bg-cyan-50 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/50 transition-colors">
+              <svg className="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.reports}</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.suppliers}</span>
           </a>
         </div>
       </div>
