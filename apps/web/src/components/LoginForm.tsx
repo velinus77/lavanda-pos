@@ -1,22 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login, AuthError } from '../lib/auth';
-
-interface LocaleContextType {
-  locale: 'ar' | 'en';
-  setLocale: (locale: 'ar' | 'en') => void;
-}
-
-interface ThemeContextType {
-  theme: 'light' | 'dark';
-  setTheme: (theme: 'light' | 'dark') => void;
-}
-
-// Context placeholders - in real app these would come from actual contexts
-const LocaleContext = React.createContext<LocaleContextType | null>(null);
-const ThemeContext = React.createContext<ThemeContextType | null>(null);
 
 interface Translations {
   title: string;
@@ -37,21 +23,26 @@ interface Translations {
   languageSwitch: string;
   darkMode: string;
   lightMode: string;
+  emailRequired: string;
+  passwordRequired: string;
+  passwordTooShort: string;
+  unlockHint: string;
+  arabicLabel: string;
 }
 
 const translations: Record<'ar' | 'en', Translations> = {
   en: {
     title: 'Lavanda POS',
     subtitle: 'Sign in to your account',
-    emailLabel: 'Email',
-    emailPlaceholder: 'Enter your email',
+    emailLabel: 'Email or Username',
+    emailPlaceholder: 'Enter your email or username',
     passwordLabel: 'Password',
     passwordPlaceholder: 'Enter your password',
     loginButton: 'Sign In',
     loggingIn: 'Signing in...',
     rememberMe: 'Remember me',
     forgotPassword: 'Forgot password?',
-    invalidCredentials: 'Invalid email or password',
+    invalidCredentials: 'Invalid email/username or password',
     accountLocked: 'Account temporarily locked',
     accountLockedUntil: 'Account locked until',
     networkError: 'Network error. Please check your connection.',
@@ -59,26 +50,42 @@ const translations: Record<'ar' | 'en', Translations> = {
     languageSwitch: 'Language',
     darkMode: 'Dark Mode',
     lightMode: 'Light Mode',
+    emailRequired: 'Email or username is required',
+    passwordRequired: 'Password is required',
+    passwordTooShort: 'Password must be at least 6 characters',
+    unlockHint: 'Your account will be automatically unlocked after this time',
+    arabicLabel: 'English',
   },
   ar: {
-    title: 'لافندا بوينت أوف سيل',
-    subtitle: 'تسجيل الدخول إلى حسابك',
-    emailLabel: 'البريد الإلكتروني',
-    emailPlaceholder: 'أدخل بريدك الإلكتروني',
-    passwordLabel: 'كلمة المرور',
-    passwordPlaceholder: 'أدخل كلمة المرور',
-    loginButton: 'تسجيل الدخول',
-    loggingIn: 'جاري تسجيل الدخول...',
-    rememberMe: 'تذكرني',
-    forgotPassword: 'نسيت كلمة المرور؟',
-    invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
-    accountLocked: 'الحساب مقفل مؤقتاً',
-    accountLockedUntil: 'الحساب مقفل حتى',
-    networkError: 'خطأ في الشبكة. يرجى التحقق من اتصالك.',
-    generalError: 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.',
-    languageSwitch: 'اللغة',
-    darkMode: 'الوضع الداكن',
-    lightMode: 'الوضع الفاتح',
+    title: '\u0644\u0627\u0641\u0646\u062f\u0627 \u0628\u0648\u064a\u0646\u062a \u0623\u0648\u0641 \u0633\u064a\u0644',
+    subtitle: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0625\u0644\u0649 \u062d\u0633\u0627\u0628\u0643',
+    emailLabel: '\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645',
+    emailPlaceholder:
+      '\u0623\u062f\u062e\u0644 \u0628\u0631\u064a\u062f\u0643 \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645',
+    passwordLabel: '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
+    passwordPlaceholder: '\u0623\u062f\u062e\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
+    loginButton: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644',
+    loggingIn: '\u062c\u0627\u0631\u064a \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644...',
+    rememberMe: '\u062a\u0630\u0643\u0631\u0646\u064a',
+    forgotPassword: '\u0646\u0633\u064a\u062a \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061f',
+    invalidCredentials:
+      '\u0627\u0644\u0628\u0631\u064a\u062f \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d\u0629',
+    accountLocked: '\u0627\u0644\u062d\u0633\u0627\u0628 \u0645\u0642\u0641\u0644 \u0645\u0624\u0642\u062a\u0627\u064b',
+    accountLockedUntil: '\u0627\u0644\u062d\u0633\u0627\u0628 \u0645\u0642\u0641\u0644 \u062d\u062a\u0649',
+    networkError: '\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u0634\u0628\u0643\u0629. \u064a\u0631\u062c\u0649 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u062a\u0635\u0627\u0644\u0643.',
+    generalError:
+      '\u0641\u0634\u0644 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644. \u064a\u0631\u062c\u0649 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.',
+    languageSwitch: '\u0627\u0644\u0644\u063a\u0629',
+    darkMode: '\u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u062f\u0627\u0643\u0646',
+    lightMode: '\u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u0641\u0627\u062a\u062d',
+    emailRequired:
+      '\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0645\u0637\u0644\u0648\u0628',
+    passwordRequired: '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0645\u0637\u0644\u0648\u0628\u0629',
+    passwordTooShort:
+      '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064a\u062c\u0628 \u0623\u0646 \u062a\u0643\u0648\u0646 6 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644',
+    unlockHint:
+      '\u0633\u064a\u062a\u0645 \u0641\u062a\u062d \u0627\u0644\u062d\u0633\u0627\u0628 \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b \u0628\u0639\u062f \u0647\u0630\u0627 \u0627\u0644\u0648\u0642\u062a',
+    arabicLabel: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629',
   },
 };
 
@@ -105,7 +112,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const t = translations[locale];
   const isRTL = locale === 'ar';
 
-  // Apply theme class to document
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'dark') {
@@ -119,64 +125,43 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   const validateForm = (): boolean => {
     if (!email.trim()) {
-      setError({
-        message: locale === 'ar' ? 'البريد الإلكتروني مطلوب' : 'Email is required',
-        code: 'unknown',
-      });
+      setError({ message: t.emailRequired, code: 'unknown' });
       return false;
     }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError({
-        message: locale === 'ar' ? 'صيغة البريد الإلكتروني غير صحيحة' : 'Invalid email format',
-        code: 'unknown',
-      });
-      return false;
-    }
-    
+
     if (!password) {
-      setError({
-        message: locale === 'ar' ? 'كلمة المرور مطلوبة' : 'Password is required',
-        code: 'unknown',
-      });
+      setError({ message: t.passwordRequired, code: 'unknown' });
       return false;
     }
-    
+
     if (password.length < 6) {
-      setError({
-        message: locale === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters',
-        code: 'unknown',
-      });
+      setError({ message: t.passwordTooShort, code: 'unknown' });
       return false;
     }
-    
+
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const result = await login({ email, password });
-      
+
       if ('code' in result) {
-        // AuthError returned
         setError(result);
+      } else if (onLoginSuccess) {
+        onLoginSuccess(result.user);
       } else {
-        // AuthResponse returned - login successful
-        if (onLoginSuccess) {
-          onLoginSuccess(result.user);
-        } else {
-          router.push('/dashboard');
-        }
+        router.refresh();
+        router.push('/dashboard');
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -190,20 +175,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   };
 
   const toggleLocale = () => {
-    setLocale(prev => prev === 'ar' ? 'en' : 'ar');
+    setLocale((prev) => (prev === 'ar' ? 'en' : 'ar'));
   };
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const getErrorMessage = (err: AuthError): string => {
-    switch (err.code) {
+  const getErrorMessage = (authError: AuthError): string => {
+    switch (authError.code) {
       case 'invalid_credentials':
         return t.invalidCredentials;
       case 'account_locked':
-        if (err.lockUntil) {
-          const lockTime = new Date(err.lockUntil).toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'en-US');
+        if (authError.lockUntil) {
+          const lockTime = new Date(authError.lockUntil).toLocaleTimeString(
+            locale === 'ar' ? 'ar-EG' : 'en-US'
+          );
           return `${t.accountLockedUntil} ${lockTime}`;
         }
         return t.accountLocked;
@@ -215,19 +202,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${
-      theme === 'dark' 
-        ? 'bg-gray-900' 
-        : 'bg-gradient-to-br from-purple-50 to-blue-50'
-    }`}>
-      <div className={`w-full max-w-md p-8 rounded-2xl shadow-xl transition-all duration-300 ${
-        theme === 'dark'
-          ? 'bg-gray-800 shadow-gray-900/50'
-          : 'bg-white shadow-purple-200/50'
-      }`}>
-        {/* Header controls */}
+    <div
+      className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${
+        theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-purple-50 to-blue-50'
+      }`}
+    >
+      <div
+        className={`w-full max-w-md p-8 rounded-2xl shadow-xl transition-all duration-300 ${
+          theme === 'dark' ? 'bg-gray-800 shadow-gray-900/50' : 'bg-white shadow-purple-200/50'
+        }`}
+      >
         <div className="flex justify-between items-center mb-6">
-          {/* Language Toggle */}
           <button
             type="button"
             onClick={toggleLocale}
@@ -238,13 +223,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             }`}
             aria-label={t.languageSwitch}
           >
-            <span>{locale === 'ar' ? 'العربية' : 'English'}</span>
+            <span>{locale === 'ar' ? t.arabicLabel : 'English'}</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+              />
             </svg>
           </button>
-          
-          {/* Theme Toggle */}
+
           <button
             type="button"
             onClick={toggleTheme}
@@ -257,60 +246,65 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           >
             {theme === 'dark' ? (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
               </svg>
             ) : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
               </svg>
             )}
             <span>{theme === 'dark' ? t.lightMode : t.darkMode}</span>
           </button>
         </div>
 
-        {/* Title */}
         <div className="text-center mb-8">
-          <h1 className={`text-3xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          <h1 className={`text-3xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             {t.title}
           </h1>
-          <p className={
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-          }>
-            {t.subtitle}
-          </p>
+          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>{t.subtitle}</p>
         </div>
 
-        {/* Error Message */}
         {error && (
-          <div className={`mb-6 p-4 rounded-lg border transition-all ${
-            theme === 'dark'
-              ? 'bg-red-900/20 border-red-800 text-red-300'
-              : 'bg-red-50 border-red-200 text-red-700'
-          }`}>
+          <div
+            className={`mb-6 p-4 rounded-lg border transition-all ${
+              theme === 'dark'
+                ? 'bg-red-900/20 border-red-800 text-red-300'
+                : 'bg-red-50 border-red-200 text-red-700'
+            }`}
+          >
             <div className="flex items-start gap-3">
               <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <div>
                 <p className="font-medium">{getErrorMessage(error)}</p>
                 {error.code === 'account_locked' && error.lockUntil && (
-                  <p className="text-sm mt-1 opacity-80">
-                    {locale === 'ar' ? 'سيتم فتح الحساب تلقائياً بعد هذا الوقت' : 'Your account will be automatically unlocked after this time'}
-                  </p>
+                  <p className="text-sm mt-1 opacity-80">{t.unlockHint}</p>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email Field */}
           <div>
-            <label 
-              htmlFor="email" 
+            <label
+              htmlFor="email"
               className={`block text-sm font-medium mb-2 ${
                 theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
               }`}
@@ -319,7 +313,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </label>
             <input
               id="email"
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
@@ -328,17 +322,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 theme === 'dark'
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-              } ${
-                error && !email ? 'border-red-500' : ''
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-              autoComplete="email"
+              } ${error && !email ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+              autoComplete="username"
             />
           </div>
 
-          {/* Password Field */}
           <div>
-            <label 
-              htmlFor="password" 
+            <label
+              htmlFor="password"
               className={`block text-sm font-medium mb-2 ${
                 theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
               }`}
@@ -356,14 +347,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 theme === 'dark'
                   ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-              } ${
-                error && !password ? 'border-red-500' : ''
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              } ${error && !password ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
               autoComplete="current-password"
             />
           </div>
 
-          {/* Remember Me & Forgot Password */}
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -377,9 +365,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                     : 'border-gray-300 bg-white text-purple-600 focus:ring-purple-500/20'
                 } disabled:opacity-50`}
               />
-              <span className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
+              <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                 {t.rememberMe}
               </span>
             </label>
@@ -395,7 +381,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </button>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -409,7 +394,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <span className="flex items-center justify-center gap-2">
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 {t.loggingIn}
               </span>

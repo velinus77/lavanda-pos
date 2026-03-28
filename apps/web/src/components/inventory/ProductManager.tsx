@@ -2,21 +2,24 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Modal from '../ui/Modal';
+import { getAuthToken } from '@/lib/auth';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 interface Category {
-  id: number;
+  id: string;
   name_en: string;
   name_ar: string;
 }
 
 interface Supplier {
-  id: number;
+  id: string;
   name_en: string;
   name_ar: string;
 }
 
 interface ProductBatch {
-  id: number;
+  id: string;
   batch_number: string;
   cost_price: number;
   current_quantity: number;
@@ -29,7 +32,7 @@ interface ProductBatch {
 }
 
 interface Product {
-  id: number;
+  id: string;
   name_en: string;
   name_ar: string;
   barcode: string;
@@ -37,9 +40,9 @@ interface Product {
   cost_price: number;
   sale_price: number;
   compare_at_price?: number;
-  category_id?: number;
+  category_id?: string;
   category?: Category;
-  supplier_id?: number;
+  supplier_id?: string;
   supplier?: Supplier;
   is_controlled: boolean;
   min_stock_quantity?: number;
@@ -50,6 +53,14 @@ interface Product {
   batches?: ProductBatch[];
   created_at: string;
   updated_at: string;
+}
+
+interface ProductListResponse {
+  products?: unknown[];
+}
+
+interface ProductBatchesResponse {
+  batches?: unknown[];
 }
 
 interface Translations {
@@ -236,9 +247,9 @@ export interface ProductManagerProps {
 export const ProductManager: React.FC<ProductManagerProps> = ({
   locale = 'en',
   theme = 'light',
-  apiUrl = '/api/products',
-  categoriesApiUrl = '/api/categories',
-  suppliersApiUrl = '/api/suppliers',
+  apiUrl = `${API_BASE}/api/products`,
+  categoriesApiUrl = `${API_BASE}/api/categories`,
+  suppliersApiUrl = `${API_BASE}/api/suppliers`,
   itemsPerPage = 10,
 }) => {
   const t = translations[locale];
@@ -249,11 +260,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<number | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -273,8 +284,8 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     cost_price: 0,
     sale_price: 0,
     compare_at_price: 0,
-    category_id: null as number | null,
-    supplier_id: null as number | null,
+    category_id: null as string | null,
+    supplier_id: null as string | null,
     is_controlled: false,
     min_stock_quantity: 0,
     description_en: '',
@@ -292,53 +303,151 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getAuthHeaders = useCallback(() => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, []);
+
+  const mapBatch = useCallback((batch: any): ProductBatch => {
+    const expiryDate =
+      typeof batch.expiry_date === 'number'
+        ? new Date(batch.expiry_date * 1000).toISOString()
+        : typeof batch.expiryDate === 'string'
+          ? batch.expiryDate
+          : batch.expiryDate instanceof Date
+            ? batch.expiryDate.toISOString()
+            : batch.expiry_date ?? new Date().toISOString();
+    const now = Date.now();
+    const expiryMs = new Date(expiryDate).getTime();
+    const daysUntilExpiry = Math.ceil((expiryMs - now) / (1000 * 60 * 60 * 24));
+
+    return {
+      id: String(batch.id),
+      batch_number: batch.batch_number ?? batch.batchNumber ?? '',
+      cost_price: Number(batch.cost_price ?? batch.costPrice ?? 0),
+      current_quantity: Number(batch.current_quantity ?? batch.currentQuantity ?? 0),
+      initial_quantity: Number(batch.initial_quantity ?? batch.initialQuantity ?? batch.current_quantity ?? batch.currentQuantity ?? 0),
+      expiry_date: expiryDate,
+      is_expired: daysUntilExpiry < 0,
+      days_until_expiry: daysUntilExpiry,
+      created_at: batch.created_at ?? batch.createdAt ?? '',
+      updated_at: batch.updated_at ?? batch.updatedAt ?? '',
+    };
+  }, []);
+
+  const mapProduct = useCallback((product: any): Product => ({
+    id: String(product.id),
+    name_en: product.name_en ?? product.name ?? '',
+    name_ar: product.name_ar ?? '',
+    barcode: product.barcode ?? '',
+    sku: product.sku ?? '',
+    cost_price: Number(product.cost_price ?? product.costPrice ?? 0),
+    sale_price: Number(product.sale_price ?? product.selling_price ?? product.sellingPrice ?? 0),
+    compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : undefined,
+    category_id: product.category_id ? String(product.category_id) : undefined,
+    category:
+      product.category_name || product.category_name_ar
+        ? {
+            id: String(product.category_id ?? ''),
+            name_en: product.category_name ?? '',
+            name_ar: product.category_name_ar ?? '',
+          }
+        : undefined,
+    supplier_id: product.supplier_id ? String(product.supplier_id) : undefined,
+    supplier:
+      product.supplier_name || product.supplier_name_ar
+        ? {
+            id: String(product.supplier_id ?? ''),
+            name_en: product.supplier_name ?? '',
+            name_ar: product.supplier_name_ar ?? '',
+          }
+        : undefined,
+    is_controlled: Boolean(product.is_controlled ?? product.isControlled),
+    min_stock_quantity: Number(product.min_stock_quantity ?? product.min_stock_level ?? product.minStockLevel ?? 0),
+    description_en: product.description_en ?? product.description ?? '',
+    description_ar: product.description_ar ?? '',
+    is_active: Boolean(product.is_active ?? product.isActive ?? true),
+    total_quantity: Number(product.total_quantity ?? product.total_stock ?? 0),
+    batches: Array.isArray(product.batches) ? product.batches.map(mapBatch) : undefined,
+    created_at: product.created_at ?? product.createdAt ?? '',
+    updated_at: product.updated_at ?? product.updatedAt ?? '',
+  }), [mapBatch]);
+
   // Fetch categories and suppliers
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch(categoriesApiUrl);
+      const response = await fetch(categoriesApiUrl, {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
-        setCategories(data);
+        setCategories(Array.isArray(data) ? data : data.categories ?? []);
       }
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
-  }, [categoriesApiUrl]);
+  }, [categoriesApiUrl, getAuthHeaders]);
 
   const fetchSuppliers = useCallback(async () => {
     try {
-      const response = await fetch(suppliersApiUrl);
+      const response = await fetch(suppliersApiUrl, {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
-        setSuppliers(data);
+        setSuppliers(Array.isArray(data) ? data : data.suppliers ?? []);
       }
     } catch (err) {
       console.error('Failed to fetch suppliers:', err);
     }
-  }, [suppliersApiUrl]);
+  }, [suppliersApiUrl, getAuthHeaders]);
 
   const fetchProducts = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await fetch(apiUrl, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
-      
+
       if (!response.ok) {
         throw new Error(t.fetchError);
       }
-      
-      const data = await response.json();
-      setProducts(data);
+
+      const data = (await response.json()) as ProductListResponse | unknown[];
+      const productRows = Array.isArray(data) ? data : data.products ?? [];
+      setProducts(productRows.map(mapProduct));
     } catch (err) {
       setError(err instanceof Error ? err.message : t.fetchError);
     } finally {
       setIsLoading(false);
     }
-  }, [apiUrl, t.fetchError]);
+  }, [apiUrl, getAuthHeaders, mapProduct, t.fetchError]);
+
+  const fetchProductBatches = useCallback(
+    async (productId: string) => {
+      const response = await fetch(`${apiUrl}/${productId}/batches`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(t.fetchError);
+      }
+
+      const data = (await response.json()) as ProductBatchesResponse;
+      const batches = Array.isArray(data) ? data : data.batches ?? [];
+
+      setProducts((currentProducts) =>
+        currentProducts.map((product) =>
+          product.id === productId ? { ...product, batches: batches.map(mapBatch) } : product
+        )
+      );
+    },
+    [apiUrl, getAuthHeaders, mapBatch, t.fetchError]
+  );
 
   useEffect(() => {
     fetchProducts();
@@ -471,10 +580,19 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          name: formData.name_en.trim(),
+          name_ar: formData.name_ar.trim(),
+          barcode: formData.barcode.trim(),
+          description: formData.description_en.trim() || formData.description_ar.trim() || null,
+          category_id: formData.category_id,
+          supplier_id: formData.supplier_id,
+          cost_price: formData.cost_price,
+          selling_price: formData.sale_price,
+          min_stock_level: formData.min_stock_quantity,
+          is_controlled: formData.is_controlled,
+        }),
       });
 
       if (!response.ok) {
@@ -502,6 +620,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     try {
       const response = await fetch(`${apiUrl}/${selectedProduct.id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -530,10 +649,22 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(batchFormData),
+        headers: getAuthHeaders(),
+        body: JSON.stringify(
+          isBatchEditMode
+            ? {
+                cost_price: batchFormData.cost_price,
+                current_quantity: batchFormData.current_quantity,
+                expiry_date: Math.floor(new Date(batchFormData.expiry_date).getTime() / 1000),
+              }
+            : {
+                batch_number: batchFormData.batch_number.trim(),
+                cost_price: batchFormData.cost_price,
+                initial_quantity: batchFormData.current_quantity,
+                expiry_date: Math.floor(new Date(batchFormData.expiry_date).getTime() / 1000),
+                supplier_id: selectedProduct.supplier_id ?? null,
+              }
+        ),
       });
 
       if (!response.ok) {
@@ -544,6 +675,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       setIsBatchModalOpen(false);
       setSelectedProduct(null);
       setSelectedBatch(null);
+      if (expandedProduct) {
+        await fetchProductBatches(expandedProduct);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t.saveError);
     } finally {
@@ -551,8 +685,21 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     }
   };
 
-  const toggleProductExpand = (productId: number) => {
-    setExpandedProduct(expandedProduct === productId ? null : productId);
+  const toggleProductExpand = async (productId: string) => {
+    if (expandedProduct === productId) {
+      setExpandedProduct(null);
+      return;
+    }
+
+    setExpandedProduct(productId);
+    const product = products.find((item) => item.id === productId);
+    if (!product?.batches) {
+      try {
+        await fetchProductBatches(productId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t.fetchError);
+      }
+    }
   };
 
   const getExpiryStatus = (batch: ProductBatch) => {
@@ -643,7 +790,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           <select
             value={categoryFilter}
             onChange={(e) => {
-              setCategoryFilter(e.target.value === 'all' ? 'all' : Number(e.target.value));
+              setCategoryFilter(e.target.value === 'all' ? 'all' : e.target.value);
               setCurrentPage(1);
             }}
             className={inputClasses}
@@ -1103,7 +1250,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             <label className={labelClasses}>{t.categoryLabel}</label>
             <select
               value={formData.category_id || ''}
-              onChange={(e) => setFormData({ ...formData, category_id: e.target.value ? Number(e.target.value) : null })}
+              onChange={(e) => setFormData({ ...formData, category_id: e.target.value || null })}
               className={inputClasses}
             >
               <option value="">No Category</option>
@@ -1118,7 +1265,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             <label className={labelClasses}>{t.supplierLabel}</label>
             <select
               value={formData.supplier_id || ''}
-              onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value ? Number(e.target.value) : null })}
+              onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value || null })}
               className={inputClasses}
             >
               <option value="">No Supplier</option>

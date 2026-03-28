@@ -2,17 +2,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
+import { getAuthToken } from '@/lib/auth';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 interface Product {
-  id: number;
+  id: string;
   name_en: string;
   name_ar: string;
   barcode: string;
 }
 
 interface ExpiringBatch {
-  id: number;
-  product_id: number;
+  id: string;
+  product_id: string;
   product?: Product;
   batch_number: string;
   cost_price: number;
@@ -163,9 +166,9 @@ export interface ExpiryMonitorProps {
 export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
   locale = 'en',
   theme = 'light',
-  expiringApiUrl = '/api/stock/expiring',
-  expiredApiUrl = '/api/stock/expired',
-  disposeApiUrl = '/api/stock/expired/dispose',
+  expiringApiUrl = `${API_BASE}/api/stock/expiring`,
+  expiredApiUrl = `${API_BASE}/api/stock/expired`,
+  disposeApiUrl = `${API_BASE}/api/stock/expired/dispose`,
   onDispose,
 }) => {
   const t = translations[locale];
@@ -186,14 +189,22 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
   const [selectedBatch, setSelectedBatch] = useState<ExpiringBatch | null>(null);
   const [isDisposing, setIsDisposing] = useState(false);
 
+  const getAuthHeaders = useCallback(() => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, []);
+
   const fetchExpiryData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
       const [expiringRes, expiredRes] = await Promise.all([
-        fetch(expiringApiUrl),
-        fetch(expiredApiUrl),
+        fetch(expiringApiUrl, { headers: getAuthHeaders() }),
+        fetch(expiredApiUrl, { headers: getAuthHeaders() }),
       ]);
 
       if (!expiringRes.ok || !expiredRes.ok) {
@@ -205,15 +216,15 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
         expiredRes.json(),
       ]);
 
-      setExpiringBatches(expiringData);
-      setExpiredBatches(expiredData);
+      setExpiringBatches(expiringData.batches ?? []);
+      setExpiredBatches(expiredData.batches ?? []);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : t.errorFetch);
     } finally {
       setIsLoading(false);
     }
-  }, [expiringApiUrl, expiredApiUrl, t.errorFetch]);
+  }, [expiringApiUrl, expiredApiUrl, getAuthHeaders, t.errorFetch]);
 
   useEffect(() => {
     fetchExpiryData();
@@ -224,11 +235,13 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
 
     setIsDisposing(true);
     try {
-      const response = await fetch(`${disposeApiUrl}/${selectedBatch.id}`, {
+      const response = await fetch(disposeApiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          batch_ids: [selectedBatch.id],
+          reason: 'Expired batch disposal',
+        }),
       });
 
       if (!response.ok) {

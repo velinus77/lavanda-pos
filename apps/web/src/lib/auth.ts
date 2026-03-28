@@ -3,18 +3,18 @@
  * Handles login, logout, token refresh, and user session management
  */
 
-const API_BASE = '/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const ACCESS_TOKEN_KEY = 'lavanda_access_token';
-const REFRESH_TOKEN_KEY = 'lavanda_refresh_token';
 const USER_KEY = 'lavanda_user';
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
+  username: string;
+  fullName: string;
   full_name: string;
   role: 'admin' | 'manager' | 'cashier';
-  language: 'ar' | 'en';
-  theme: 'light' | 'dark';
+  isActive: boolean;
   is_active: boolean;
 }
 
@@ -25,8 +25,7 @@ export interface LoginCredentials {
 
 export interface AuthResponse {
   user: User;
-  access_token: string;
-  refresh_token: string;
+  accessToken: string;
 }
 
 export interface AuthError {
@@ -35,13 +34,23 @@ export interface AuthError {
   lockUntil?: string;
 }
 
+function normalizeUser(user: User): User {
+  return {
+    ...user,
+    fullName: user.fullName ?? user.full_name,
+    full_name: user.full_name ?? user.fullName,
+    isActive: user.isActive ?? user.is_active,
+    is_active: user.is_active ?? user.isActive,
+  };
+}
+
 /**
  * Store tokens and user data in localStorage
  */
-function setSession(user: User, accessToken: string, refreshToken: string): void {
+function setSession(user: User, accessToken: string): void {
+  const normalizedUser = normalizeUser(user);
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
 }
 
 /**
@@ -49,7 +58,6 @@ function setSession(user: User, accessToken: string, refreshToken: string): void
  */
 function clearSession(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 
@@ -65,20 +73,13 @@ export function getAuthToken(): string | null {
 }
 
 /**
- * Get stored refresh token
- */
-function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
-/**
  * Get stored user data
  */
 function getStoredUser(): User | null {
   const userStr = localStorage.getItem(USER_KEY);
   if (!userStr) return null;
   try {
-    return JSON.parse(userStr);
+    return normalizeUser(JSON.parse(userStr));
   } catch {
     return null;
   }
@@ -90,8 +91,9 @@ function getStoredUser(): User | null {
  */
 export async function login(credentials: LoginCredentials): Promise<AuthResponse | AuthError> {
   try {
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -105,7 +107,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
         return {
           message: data.message || 'Account is temporarily locked due to too many failed attempts',
           code: 'account_locked',
-          lockUntil: data.lock_until,
+          lockUntil: data.lockUntil,
         };
       }
       if (data.code === 'invalid_credentials' || response.status === 401) {
@@ -120,12 +122,11 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
       };
     }
 
-    setSession(data.user, data.access_token, data.refresh_token);
+    setSession(data.user, data.accessToken);
 
     return {
       user: data.user,
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
+      accessToken: data.accessToken,
     };
   } catch (error) {
     console.error('Login error:', error);
@@ -140,45 +141,29 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
  * Logout - clears session data and calls backend logout endpoint
  */
 export async function logout(): Promise<void> {
-  const refreshToken = getRefreshToken();
-  
-  if (refreshToken) {
-    try {
-      await fetch(`${API_BASE}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
-    } catch (error) {
-      console.error('Logout backend call failed:', error);
-    }
+  try {
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch (error) {
+    console.error('Logout backend call failed:', error);
   }
-  
+
   clearSession();
 }
 
 /**
  * Refresh access token using refresh token
  */
-export async function refreshToken(): Promise<{ access_token: string } | AuthError> {
-  const token = getRefreshToken();
-  
-  if (!token) {
-    return {
-      message: 'No refresh token available',
-      code: 'unknown',
-    };
-  }
-
+export async function refreshToken(): Promise<{ accessToken: string } | AuthError> {
   try {
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
+    const response = await fetch(`${API_BASE}/api/auth/refresh`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refresh_token: token }),
     });
 
     const data = await response.json();
@@ -191,9 +176,9 @@ export async function refreshToken(): Promise<{ access_token: string } | AuthErr
       };
     }
 
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
 
-    return { access_token: data.access_token };
+    return { accessToken: data.accessToken };
   } catch (error) {
     console.error('Token refresh error:', error);
     return {
@@ -214,8 +199,9 @@ export async function getCurrentUser(): Promise<User | null> {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/auth/me`, {
+    const response = await fetch(`${API_BASE}/api/auth/me`, {
       method: 'GET',
+      credentials: 'include',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -225,23 +211,28 @@ export async function getCurrentUser(): Promise<User | null> {
     if (!response.ok) {
       if (response.status === 401) {
         const refreshResult = await refreshToken();
-        if ('access_token' in refreshResult) {
-          const retryResponse = await fetch(`${API_BASE}/auth/me`, {
+        if ('accessToken' in refreshResult) {
+          const retryResponse = await fetch(`${API_BASE}/api/auth/me`, {
             method: 'GET',
+            credentials: 'include',
             headers: {
-              'Authorization': `Bearer ${refreshResult.access_token}`,
+              'Authorization': `Bearer ${refreshResult.accessToken}`,
               'Content-Type': 'application/json',
             },
           });
           if (retryResponse.ok) {
-            return retryResponse.json();
+            const retryData = await retryResponse.json();
+            const retryUser = normalizeUser(retryData.user);
+            localStorage.setItem(USER_KEY, JSON.stringify(retryUser));
+            return retryUser;
           }
         }
       }
       return null;
     }
 
-    const user = await response.json();
+    const data = await response.json();
+    const user = normalizeUser(data.user);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     return user;
   } catch (error) {

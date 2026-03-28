@@ -14,20 +14,20 @@ export const metadata: Metadata = {
  */
 async function checkAuthentication(): Promise<boolean> {
   const cookieStore = await cookies();
-  const refreshToken = cookieStore.get('refresh_token');
+  const refreshToken = cookieStore.get('refreshToken');
 
   if (!refreshToken?.value) {
     return false;
   }
 
-  // Verify token exists and is valid by checking /api/auth/me
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/me`,
+      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/refresh`,
       {
-        method: 'GET',
+        method: 'POST',
+        cache: 'no-store',
         headers: {
-          Cookie: `refresh_token=${refreshToken.value}`,
+          Cookie: `refreshToken=${refreshToken.value}`,
         },
       }
     );

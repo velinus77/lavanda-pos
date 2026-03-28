@@ -2,17 +2,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
+import { getAuthToken } from '@/lib/auth';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 interface Product {
-  id: number;
+  id: string;
   name_en: string;
   name_ar: string;
   barcode: string;
 }
 
 interface ProductBatch {
-  id: number;
-  product_id: number;
+  id: string;
+  product_id: string;
   batch_number: string;
   cost_price: number;
   current_quantity: number;
@@ -218,8 +221,8 @@ export interface StockAdjustmentProps {
 export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   locale = 'en',
   theme = 'light',
-  productsApiUrl = '/api/products',
-  stockAdjustApiUrl = '/api/stock/adjust',
+  productsApiUrl = `${API_BASE}/api/products`,
+  stockAdjustApiUrl = `${API_BASE}/api/stock/adjust`,
   onSuccess,
 }) => {
   const t = translations[locale];
@@ -231,8 +234,8 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'remove' | 'return' | 'dispose'>('add');
   const [quantity, setQuantity] = useState<number>(1);
   const [reason, setReason] = useState('');
@@ -242,30 +245,76 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<AdjustmentPreview | null>(null);
 
+  const getAuthHeaders = useCallback(() => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, []);
+
+  const mapProduct = useCallback(
+    (product: any): Product => ({
+      id: String(product.id),
+      name_en: product.name_en ?? product.name ?? '',
+      name_ar: product.name_ar ?? '',
+      barcode: product.barcode ?? '',
+    }),
+    []
+  );
+
+  const mapBatch = useCallback((batch: any): ProductBatch => {
+    const expiryDate =
+      typeof batch.expiry_date === 'number'
+        ? new Date(batch.expiry_date * 1000).toISOString()
+        : batch.expiryDate instanceof Date
+          ? batch.expiryDate.toISOString()
+          : batch.expiryDate ?? batch.expiry_date ?? new Date().toISOString();
+    const daysUntilExpiry = Math.ceil(
+      (new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+
+    return {
+      id: String(batch.id),
+      product_id: String(batch.product_id ?? batch.productId ?? ''),
+      batch_number: batch.batch_number ?? batch.batchNumber ?? '',
+      cost_price: Number(batch.cost_price ?? batch.costPrice ?? 0),
+      current_quantity: Number(batch.current_quantity ?? batch.currentQuantity ?? 0),
+      expiry_date: expiryDate,
+      days_until_expiry: daysUntilExpiry,
+      is_expired: daysUntilExpiry < 0,
+    };
+  }, []);
+
   const fetchProducts = useCallback(async () => {
     try {
       setIsLoadingProducts(true);
       setError(null);
-      const response = await fetch(productsApiUrl);
+      const response = await fetch(productsApiUrl, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) {
         throw new Error(t.errors.fetchFailed);
       }
       const data = await response.json();
-      setProducts(data);
+      const productRows = Array.isArray(data) ? data : data.products ?? [];
+      setProducts(productRows.map(mapProduct));
     } catch (err) {
       setError(err instanceof Error ? err.message : t.errors.fetchFailed);
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [productsApiUrl, t.errors.fetchFailed]);
+  }, [getAuthHeaders, mapProduct, productsApiUrl, t.errors.fetchFailed]);
 
-  const fetchBatches = useCallback(async (productId: number) => {
+  const fetchBatches = useCallback(async (productId: string) => {
     try {
-      const response = await fetch(`${productsApiUrl}/${productId}/batches`);
+      const response = await fetch(`${productsApiUrl}/${productId}/batches`, {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
-        // Sort by expiry date (FEFO) - earliest expiry first
-        const sorted = data.sort((a: ProductBatch, b: ProductBatch) => 
+        const batchRows = Array.isArray(data) ? data : data.batches ?? [];
+        const sorted = batchRows.map(mapBatch).sort((a: ProductBatch, b: ProductBatch) => 
           new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
         );
         setBatches(sorted);
@@ -280,7 +329,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       console.error('Failed to fetch batches:', err);
       setBatches([]);
     }
-  }, [productsApiUrl]);
+  }, [getAuthHeaders, mapBatch, productsApiUrl]);
 
   useEffect(() => {
     fetchProducts();
@@ -353,13 +402,10 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     try {
       const response = await fetch(stockAdjustApiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           product_id: selectedProductId,
           batch_id: selectedBatchId,
-          adjustment_type: adjustmentType,
           quantity: adjustmentType === 'remove' || adjustmentType === 'dispose' ? -quantity : quantity,
           reason: reason.trim(),
         }),
@@ -469,7 +515,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
             <select
               value={selectedProductId || ''}
               onChange={(e) => {
-                setSelectedProductId(e.target.value ? Number(e.target.value) : null);
+                setSelectedProductId(e.target.value || null);
                 setFormErrors({ ...formErrors, product: '' });
               }}
               className={`${inputClasses} ${formErrors.product ? 'border-red-500' : ''}`}
@@ -491,7 +537,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
             <select
               value={selectedBatchId || ''}
               onChange={(e) => {
-                setSelectedBatchId(e.target.value ? Number(e.target.value) : null);
+                setSelectedBatchId(e.target.value || null);
                 setFormErrors({ ...formErrors, batch: '' });
               }}
               className={`${inputClasses} ${formErrors.batch ? 'border-red-500' : ''}`}

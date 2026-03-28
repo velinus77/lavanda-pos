@@ -182,20 +182,52 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get('/expiring', { preHandler: [requireAuth] }, async (request, reply) => {
     try {
-      const now = Math.floor(Date.now() / 1000);
-      const thirtyDaysFromNow = now + 30 * 24 * 60 * 60;
+      const now = new Date();
+      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-      const batches = await db
-        .select()
+      const rows = await db
+        .select({
+          batch: productBatches,
+          product: products,
+        })
         .from(productBatches)
+        .leftJoin(products, eq(productBatches.productId, products.id))
         .where(
           and(
             eq(productBatches.isActive, true),
-            gte(productBatches.expiryDate, new Date(now * 1000)),
-            lt(productBatches.expiryDate, new Date(thirtyDaysFromNow * 1000))
+            gte(productBatches.expiryDate, now),
+            lt(productBatches.expiryDate, thirtyDaysFromNow)
           )
         )
+        .orderBy(productBatches.expiryDate)
         .all();
+
+      const batches = rows.map(({ batch, product }) => {
+        const daysUntilExpiry = Math.ceil(
+          (batch.expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        );
+
+        return {
+          id: batch.id,
+          product_id: batch.productId,
+          product: product
+            ? {
+                id: product.id,
+                name_en: product.name,
+                name_ar: product.nameAr ?? '',
+                barcode: product.barcode,
+              }
+            : undefined,
+          batch_number: batch.batchNumber,
+          cost_price: batch.costPrice,
+          current_quantity: batch.currentQuantity,
+          expiry_date: batch.expiryDate.toISOString(),
+          days_until_expiry: daysUntilExpiry,
+          is_expired: daysUntilExpiry < 0,
+          is_disposed: !batch.isActive,
+          total_value: batch.costPrice * batch.currentQuantity,
+        };
+      });
 
       return reply.code(200).send({
         batches,
@@ -217,11 +249,43 @@ export const stockRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const now = new Date();
 
-      const batches = await db
-        .select()
+      const rows = await db
+        .select({
+          batch: productBatches,
+          product: products,
+        })
         .from(productBatches)
+        .leftJoin(products, eq(productBatches.productId, products.id))
         .where(and(eq(productBatches.isActive, true), lt(productBatches.expiryDate, now)))
+        .orderBy(desc(productBatches.expiryDate))
         .all();
+
+      const batches = rows.map(({ batch, product }) => {
+        const daysUntilExpiry = Math.ceil(
+          (batch.expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        );
+
+        return {
+          id: batch.id,
+          product_id: batch.productId,
+          product: product
+            ? {
+                id: product.id,
+                name_en: product.name,
+                name_ar: product.nameAr ?? '',
+                barcode: product.barcode,
+              }
+            : undefined,
+          batch_number: batch.batchNumber,
+          cost_price: batch.costPrice,
+          current_quantity: batch.currentQuantity,
+          expiry_date: batch.expiryDate.toISOString(),
+          days_until_expiry: daysUntilExpiry,
+          is_expired: true,
+          is_disposed: !batch.isActive,
+          total_value: batch.costPrice * batch.currentQuantity,
+        };
+      });
 
       return reply.code(200).send({
         batches,
