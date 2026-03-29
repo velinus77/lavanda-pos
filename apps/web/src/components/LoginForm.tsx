@@ -7,6 +7,7 @@ import { login, AuthError } from '../lib/auth';
 interface Translations {
   title: string;
   subtitle: string;
+  workspaceBadge: string;
   emailLabel: string;
   emailPlaceholder: string;
   passwordLabel: string;
@@ -27,6 +28,7 @@ interface Translations {
   passwordRequired: string;
   passwordTooShort: string;
   unlockHint: string;
+  englishLabel: string;
   arabicLabel: string;
 }
 
@@ -34,6 +36,7 @@ const translations: Record<'ar' | 'en', Translations> = {
   en: {
     title: 'Lavanda POS',
     subtitle: 'Sign in to your account',
+    workspaceBadge: 'Pharmacy workspace',
     emailLabel: 'Email or Username',
     emailPlaceholder: 'Enter your email or username',
     passwordLabel: 'Password',
@@ -54,11 +57,13 @@ const translations: Record<'ar' | 'en', Translations> = {
     passwordRequired: 'Password is required',
     passwordTooShort: 'Password must be at least 6 characters',
     unlockHint: 'Your account will be automatically unlocked after this time',
+    englishLabel: 'English',
     arabicLabel: 'English',
   },
   ar: {
-    title: '\u0644\u0627\u0641\u0646\u062f\u0627 \u0628\u0648\u064a\u0646\u062a \u0623\u0648\u0641 \u0633\u064a\u0644',
-    subtitle: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0625\u0644\u0649 \u062d\u0633\u0627\u0628\u0643',
+    title: '\u0644\u0627\u0641\u0627\u0646\u062f\u0627 POS',
+    subtitle: '\u0627\u062f\u062e\u0644 \u0625\u0644\u0649 \u0645\u0633\u0627\u062d\u0629 \u0627\u0644\u0639\u0645\u0644',
+    workspaceBadge: '\u0645\u0633\u0627\u062d\u0629 \u0639\u0645\u0644 \u0627\u0644\u0635\u064a\u062f\u0644\u064a\u0629',
     emailLabel: '\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645',
     emailPlaceholder:
       '\u0623\u062f\u062e\u0644 \u0628\u0631\u064a\u062f\u0643 \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645',
@@ -85,6 +90,7 @@ const translations: Record<'ar' | 'en', Translations> = {
       '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064a\u062c\u0628 \u0623\u0646 \u062a\u0643\u0648\u0646 6 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644',
     unlockHint:
       '\u0633\u064a\u062a\u0645 \u0641\u062a\u062d \u0627\u0644\u062d\u0633\u0627\u0628 \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b \u0628\u0639\u062f \u0647\u0630\u0627 \u0627\u0644\u0648\u0642\u062a',
+    englishLabel: '\u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629',
     arabicLabel: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629',
   },
 };
@@ -203,25 +209,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   return (
     <div className="flex items-center justify-center p-1 transition-colors duration-300">
-      <div
-        className={`w-full max-w-md rounded-[28px] border p-8 shadow-[0_24px_60px_rgba(15,23,42,0.08)] transition-all duration-300 ${
-          theme === 'dark'
-            ? 'border-[var(--border)] bg-[var(--card)]'
-            : 'border-[var(--border)] bg-[var(--card)]'
-        }`}
-      >
-        <div className="flex justify-between items-center mb-6">
+      <div className="w-full max-w-md rounded-[var(--radius-hero)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_92%,transparent)] p-8 shadow-[0_28px_80px_rgba(15,23,42,0.10)] backdrop-blur">
+        <div className="mb-6 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={toggleLocale}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
-              theme === 'dark'
-                ? 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
-                : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
-            }`}
+            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--muted)] transition-all hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
             aria-label={t.languageSwitch}
           >
-            <span>{locale === 'ar' ? t.arabicLabel : 'English'}</span>
+            <span className="rounded-full bg-[var(--card)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+              {locale === 'ar' ? 'EN' : 'AR'}
+            </span>
+            <span>{locale === 'ar' ? t.englishLabel : t.arabicLabel}</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -235,11 +234,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="button"
             onClick={toggleTheme}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
-              theme === 'dark'
-                ? 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
-                : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]'
-            }`}
+            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--muted)] transition-all hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
             aria-label={theme === 'dark' ? t.lightMode : t.darkMode}
           >
             {theme === 'dark' ? (
@@ -265,18 +260,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </button>
         </div>
 
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--accent)_22%,transparent)] bg-[color:color-mix(in_srgb,var(--accent)_10%,var(--card)_90%)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--accent-strong)]">
+            <span className="h-2 w-2 rounded-full bg-[var(--action)]" />
+            {t.workspaceBadge}
+          </div>
           <h1 className="mb-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">{t.title}</h1>
-          <p className="text-[var(--muted)]">{t.subtitle}</p>
+          <p className="text-[15px] text-[var(--muted)]">{t.subtitle}</p>
         </div>
 
         {error && (
           <div
-            className={`mb-6 rounded-2xl border p-4 transition-all ${
-              theme === 'dark'
-                ? 'border-[#6d3a35] bg-[#2f1d1a] text-[#f1c0b7]'
-                : 'border-[#e0c2bd] bg-[#f8ebe8] text-[#8a4c41]'
-            }`}
+            className="mb-6 rounded-[var(--radius-lg)] border border-[color:color-mix(in_srgb,var(--danger)_38%,transparent)] bg-[var(--danger-soft)] p-4 text-[var(--danger)] transition-all"
           >
             <div className="flex items-start gap-3">
               <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,11 +307,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
               placeholder={t.emailPlaceholder}
-              className={`w-full rounded-2xl border px-4 py-3 transition-all outline-none ${
-                theme === 'dark'
-                  ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
-              } ${error && !email ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15 ${error && !email ? 'border-[var(--danger)]' : ''} disabled:cursor-not-allowed disabled:opacity-50`}
               autoComplete="username"
             />
           </div>
@@ -335,11 +326,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
               placeholder={t.passwordPlaceholder}
-              className={`w-full rounded-2xl border px-4 py-3 transition-all outline-none ${
-                theme === 'dark'
-                  ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[color:var(--accent)]/15'
-              } ${error && !password ? 'border-red-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15 ${error && !password ? 'border-[var(--danger)]' : ''} disabled:cursor-not-allowed disabled:opacity-50`}
               autoComplete="current-password"
             />
           </div>
@@ -351,21 +338,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={isLoading}
-                className={`h-4 w-4 rounded border transition-colors ${
-                  theme === 'dark'
-                    ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)]/15'
-                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--accent)] focus:ring-[var(--accent)]/15'
-                } disabled:opacity-50`}
+                className="h-4 w-4 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--action)] transition-colors focus:ring-[var(--action)]/15 disabled:opacity-50"
               />
               <span className="text-sm text-[var(--muted)]">{t.rememberMe}</span>
             </label>
             <button
               type="button"
-              className={`text-sm font-medium transition-colors ${
-                theme === 'dark'
-                  ? 'text-[var(--accent)] hover:text-[var(--accent-strong)]'
-                  : 'text-[var(--accent)] hover:text-[var(--accent-strong)]'
-              }`}
+              className="text-sm font-medium text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
             >
               {t.forgotPassword}
             </button>
@@ -376,8 +355,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             disabled={isLoading}
             className={`w-full rounded-2xl px-4 py-3 font-semibold transition-all ${
               isLoading
-                ? 'cursor-not-allowed bg-[color:var(--accent)]/45 text-white'
-                : 'bg-[var(--foreground)] text-[var(--card)] hover:bg-[#0f1928] dark:hover:bg-[#1a2434]'
+                ? 'cursor-not-allowed bg-[color:var(--action)]/45 text-white'
+                : 'bg-[var(--action)] text-white shadow-[0_18px_36px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)] hover:shadow-[0_20px_40px_rgba(31,157,115,0.28)]'
             }`}
           >
             {isLoading ? (

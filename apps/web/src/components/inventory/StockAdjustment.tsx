@@ -61,6 +61,16 @@ interface Translations {
   confirmButton: string;
   closePreviewButton: string;
   noBatches: string;
+  createBatchOption: string;
+  batchModeCreate: string;
+  batchModeExisting: string;
+  batchModeHint: string;
+  batchNumberLabel: string;
+  batchNumberPlaceholder: string;
+  expiryDateLabel: string;
+  costPriceLabel: string;
+  costPricePlaceholder: string;
+  currentStockLabel: string;
   fefoSuggestion: string;
   expiredWarning: string;
   lowStockWarning: string;
@@ -120,6 +130,16 @@ const translations: Record<'ar' | 'en', Translations> = {
     confirmButton: 'Confirm & Submit',
     closePreviewButton: 'Back to Edit',
     noBatches: 'No batches available for this product',
+    createBatchOption: 'Create a new batch',
+    batchModeCreate: 'Receiving a new batch',
+    batchModeExisting: 'Adjusting an existing batch',
+    batchModeHint: 'Use a new batch when stock is arriving with a fresh batch number or expiry date.',
+    batchNumberLabel: 'Batch Number *',
+    batchNumberPlaceholder: 'Enter batch number',
+    expiryDateLabel: 'Expiry Date *',
+    costPriceLabel: 'Cost Price *',
+    costPricePlaceholder: 'Enter cost price',
+    currentStockLabel: 'Current stock',
     fefoSuggestion: 'FEFO: choose the batch with the earliest expiry date',
     expiredWarning: 'This batch is expired',
     lowStockWarning: 'Low stock warning',
@@ -177,6 +197,16 @@ const translations: Record<'ar' | 'en', Translations> = {
     confirmButton: 'تأكيد وإرسال',
     closePreviewButton: 'العودة للتحرير',
     noBatches: 'لا توجد دفعات متاحة لهذا المنتج',
+    createBatchOption: 'إنشاء دفعة جديدة',
+    batchModeCreate: 'استلام دفعة جديدة',
+    batchModeExisting: 'تعديل دفعة موجودة',
+    batchModeHint: 'استخدم دفعة جديدة عندما يصل المخزون برقم دفعة أو تاريخ انتهاء مختلف.',
+    batchNumberLabel: 'رقم الدفعة *',
+    batchNumberPlaceholder: 'أدخل رقم الدفعة',
+    expiryDateLabel: 'تاريخ الانتهاء *',
+    costPriceLabel: 'سعر التكلفة *',
+    costPricePlaceholder: 'أدخل سعر التكلفة',
+    currentStockLabel: 'المخزون الحالي',
     fefoSuggestion: 'FEFO: يوصى باختيار الدفعة الأقرب انتهاءً',
     expiredWarning: 'هذه الدفعة منتهية',
     lowStockWarning: 'تحذير: مخزون منخفض',
@@ -572,26 +602,26 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 
   const getSelectedBatch = () => batches.find(b => b.id === selectedBatchId);
 
-  const inputClasses = `w-full px-4 py-2.5 rounded-lg border transition-all outline-none ${
+  const inputClasses = `w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none ${
     theme === 'dark'
-      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
+      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
+      : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
   }`;
 
   const labelClasses = `block text-sm font-medium mb-2 ${
-    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+    theme === 'dark' ? 'text-gray-300' : 'text-[var(--foreground)]'
   }`;
 
-  const buttonPrimaryClasses = `px-4 py-2.5 rounded-lg font-semibold text-white transition-all ${
+  const buttonPrimaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold text-white transition-all ${
     isSubmitting
-      ? 'bg-purple-400 cursor-not-allowed'
-      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
+      ? 'cursor-not-allowed bg-[color:var(--action)]/45'
+      : 'bg-[var(--action)] shadow-[0_16px_30px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)] hover:shadow-[0_18px_34px_rgba(31,157,115,0.28)]'
   }`;
 
-  const buttonSecondaryClasses = `px-4 py-2.5 rounded-lg font-semibold transition-all ${
+  const buttonSecondaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold transition-all ${
     theme === 'dark'
-      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      ? 'border border-[var(--border)] bg-[var(--surface)] text-gray-300 hover:bg-[var(--surface-strong)]'
+      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]'
   }`;
 
   return (
@@ -633,8 +663,10 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       )}
 
       {/* Form */}
-      <div className={`p-6 rounded-xl border ${
-        theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
+      <div className={`rounded-[var(--radius-xl)] border p-6 ${
+        theme === 'dark'
+          ? 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)]'
+          : 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)]'
       }`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Product Selection */}
@@ -676,7 +708,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
             >
               <option value="">{t.selectBatch}</option>
               {adjustmentType === 'add' && selectedProductId && (
-                <option value="__new__">Create a new batch</option>
+                <option value="__new__">{t.createBatchOption}</option>
               )}
               {batches.map((batch) => (
                 <option key={batch.id} value={batch.id}>
@@ -697,7 +729,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
             {/* FEFO Suggestion */}
             {batches.length > 0 && selectedBatchId && (
               <div className={`mt-2 text-xs ${
-                theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                theme === 'dark' ? 'text-[var(--info)]' : 'text-[var(--info)]'
               }`}>
                 <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -709,8 +741,22 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 
           {createNewBatch && (
             <>
+              <div className="md:col-span-2 rounded-[var(--radius-lg)] border border-[color:color-mix(in_srgb,var(--action)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--action)_9%,var(--surface)_91%)] p-4">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--action)]">
+                      {t.batchModeCreate}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{t.batchModeHint}</p>
+                  </div>
+                  <span className="inline-flex w-fit rounded-full border border-[color:color-mix(in_srgb,var(--action)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--action)_16%,transparent)] px-3 py-1 text-xs font-semibold text-[var(--action)]">
+                    {t.createBatchOption}
+                  </span>
+                </div>
+              </div>
+
               <div>
-                <label className={labelClasses}>Batch Number *</label>
+                <label className={labelClasses}>{t.batchNumberLabel}</label>
                 <input
                   type="text"
                   value={newBatchForm.batch_number}
@@ -719,13 +765,13 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                     setFormErrors({ ...formErrors, batch_number: '' });
                   }}
                   className={`${inputClasses} ${formErrors.batch_number ? 'border-red-500' : ''}`}
-                  placeholder="Enter batch number"
+                  placeholder={t.batchNumberPlaceholder}
                 />
                 {formErrors.batch_number && <p className="mt-1 text-sm text-red-500">{formErrors.batch_number}</p>}
               </div>
 
               <div>
-                <label className={labelClasses}>Expiry Date *</label>
+                <label className={labelClasses}>{t.expiryDateLabel}</label>
                 <input
                   type="date"
                   value={newBatchForm.expiry_date}
@@ -739,7 +785,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               </div>
 
               <div>
-                <label className={labelClasses}>Cost Price *</label>
+                <label className={labelClasses}>{t.costPriceLabel}</label>
                 <input
                   type="number"
                   min="0.01"
@@ -750,7 +796,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                     setFormErrors({ ...formErrors, cost_price: '' });
                   }}
                   className={`${inputClasses} ${formErrors.cost_price ? 'border-red-500' : ''}`}
-                  placeholder="Enter cost price"
+                  placeholder={t.costPricePlaceholder}
                 />
                 {formErrors.cost_price && <p className="mt-1 text-sm text-red-500">{formErrors.cost_price}</p>}
               </div>
@@ -775,15 +821,15 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                   }}
                   className={`p-4 rounded-lg border-2 transition-all text-left ${
                     adjustmentType === type
-                      ? 'border-purple-600 bg-purple-600/10'
+                      ? 'border-[var(--action)] bg-[color:color-mix(in_srgb,var(--action)_10%,transparent)]'
                       : theme === 'dark'
-                      ? 'border-gray-600 hover:border-gray-500'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-[var(--border)] hover:border-[color:color-mix(in_srgb,var(--action)_40%,var(--border)_60%)]'
+                      : 'border-[var(--border)] hover:border-[color:color-mix(in_srgb,var(--action)_38%,var(--border)_62%)]'
                   }`}
                 >
                   <div className={`font-semibold ${
                     adjustmentType === type
-                      ? 'text-purple-600'
+                      ? 'text-[var(--action)]'
                       : theme === 'dark' ? 'text-white' : 'text-gray-900'
                   }`}>
                     {t.adjustmentTypes[type]}
@@ -810,7 +856,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                 setFormErrors({ ...formErrors, quantity: '' });
               }}
               className={`${inputClasses} ${formErrors.quantity ? 'border-red-500' : ''}`}
-              placeholder="Enter quantity"
+              placeholder={t.errors.quantityRequired}
             />
             {formErrors.quantity && <p className="mt-1 text-sm text-red-500">{formErrors.quantity}</p>}
             
@@ -819,7 +865,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               <div className={`mt-2 text-sm ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                Current stock: <span className="font-medium">{getSelectedBatch()?.current_quantity}</span>
+                {t.currentStockLabel}: <span className="font-medium">{getSelectedBatch()?.current_quantity}</span>
                 {getSelectedBatch()?.is_expired && (
                   <span className="ml-2 text-red-500">- {t.expiredWarning}</span>
                 )}
@@ -844,8 +890,8 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        <div className="mt-6 flex items-center justify-end gap-3 border-t pt-6 ${
+          theme === 'dark' ? 'border-[var(--border)]' : 'border-[var(--border)]'
         }">
           <button
             type="button"
@@ -1037,4 +1083,3 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 };
 
 export default StockAdjustment;
-

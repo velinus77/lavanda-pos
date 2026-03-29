@@ -123,17 +123,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       className={`min-h-screen bg-[var(--background)] text-[var(--foreground)] ${isRTL ? 'rtl' : 'ltr'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      <div className="fixed inset-x-0 top-0 h-64 bg-[linear-gradient(180deg,rgba(156,122,69,0.08),transparent)] dark:bg-[linear-gradient(180deg,rgba(184,148,90,0.12),transparent)]" aria-hidden="true" />
+      <div className="fixed inset-x-0 top-0 h-64 bg-[linear-gradient(180deg,rgba(156,122,69,0.08),transparent)] dark:bg-[linear-gradient(180deg,rgba(184,148,90,0.10),transparent)]" aria-hidden="true" />
       <Sidebar user={user} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className={`relative ${isRTL ? 'lg:pr-72' : 'lg:pl-72'}`}>
-        <header className="sticky top-0 z-30 px-4 pb-4 pt-4 sm:px-6">
-          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--card)]/96 px-4 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] dark:shadow-[0_18px_50px_rgba(0,0,0,0.24)] sm:px-6">
-            <div className="flex items-start justify-between gap-4">
+        <header className="sticky top-0 z-30 border-b border-[color:color-mix(in_srgb,var(--border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--background)_84%,transparent)] px-4 py-4 backdrop-blur sm:px-6">
+          <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 items-start gap-3">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)] lg:hidden"
+                  className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)] lg:hidden"
                   aria-label={copy.openSidebar}
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,7 +144,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
                     {copy.workspace}
                   </p>
-                  <h1 className="truncate text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+                  <h1 className="truncate text-[28px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">
                     {pageTitle}
                   </h1>
                   <p className="mt-1 text-sm text-[var(--muted)]">
@@ -157,7 +156,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex shrink-0 items-center gap-2">
                 <button
                   onClick={toggleTheme}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--muted)] shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                  className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
                   aria-label={copy.themeLabel}
                   title={theme === 'dark' ? copy.lightMode : copy.darkMode}
                 >
@@ -175,7 +174,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
                 <button
                   onClick={toggleLocale}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--muted)] shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                  className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
                   aria-label={copy.languageLabel}
                 >
                   <span className="rounded-full border border-[var(--border)] bg-[var(--card)] px-2 py-0.5 text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">
@@ -183,19 +182,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </span>
                 </button>
 
-                <div className="hidden items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 shadow-sm sm:flex">
+                <div className="hidden items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 sm:flex">
                   <div className="text-right rtl:text-left">
                     <p className="text-sm font-semibold text-[var(--foreground)]">{user.full_name}</p>
                     <p className="text-xs text-[var(--muted)]">{user.email}</p>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] text-sm font-bold text-[var(--accent-strong)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-strong)] text-sm font-bold text-[var(--accent-strong)]">
                     {user.full_name.charAt(0).toUpperCase()}
                   </div>
                 </div>
 
                 <button
                   onClick={handleLogout}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[#90553d] transition hover:border-[#c98d70] hover:bg-[#f1e5dc] dark:text-[#f0b29b] dark:hover:bg-[#372117]"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--danger)] transition hover:border-[color:color-mix(in_srgb,var(--danger)_55%,transparent)] hover:bg-[var(--danger-soft)]"
                   aria-label={copy.logout}
                   title={copy.logout}
                 >
@@ -205,11 +204,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </button>
               </div>
             </div>
-          </div>
         </header>
 
         <main className="px-4 pb-8 sm:px-6">
-          <div className="rounded-[32px] border border-[var(--border)] bg-[var(--card)] p-4 shadow-[0_24px_60px_rgba(15,23,42,0.06)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.2)] sm:p-6">
+          <div className="rounded-[var(--radius-shell)] border border-[color:color-mix(in_srgb,var(--border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--card)_94%,transparent)] p-4 shadow-[0_18px_44px_rgba(15,23,42,0.05)] backdrop-blur sm:p-6">
             {children}
           </div>
         </main>
