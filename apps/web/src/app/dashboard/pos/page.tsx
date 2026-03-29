@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getCachedUser, getAuthToken } from "@/lib/auth";
+import { authenticatedFetch, getCachedUser } from "@/lib/auth";
 import { useLocale } from "@/contexts/LocaleProvider";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -49,25 +49,40 @@ interface CheckoutResult {
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_BASE = RAW_API_BASE.endsWith("/api") ? RAW_API_BASE : `${RAW_API_BASE}/api`;
 
-async function searchProducts(query: string, token: string): Promise<Product[]> {
-  const params = new URLSearchParams({ search: query, limit: "10" });
-  const res = await fetch(`${API_BASE}/products?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.products ?? data ?? [];
+function normalizeProduct(raw: Record<string, unknown>): Product {
+  return {
+    id: String(raw.id ?? ""),
+    name: String(raw.name ?? ""),
+    nameAr: typeof raw.name_ar === "string" ? raw.name_ar : undefined,
+    barcode: typeof raw.barcode === "string" ? raw.barcode : undefined,
+    price: Number(raw.selling_price ?? raw.price ?? 0),
+    currentQuantity: Number(raw.total_stock ?? raw.current_quantity ?? raw.currentQuantity ?? 0),
+    unit: typeof raw.unit === "string" ? raw.unit : undefined,
+    categoryName:
+      typeof raw.category_name === "string"
+        ? raw.category_name
+        : typeof raw.categoryName === "string"
+          ? raw.categoryName
+          : undefined,
+  };
 }
 
-async function postCheckout(
-  items: { productId: string; quantity: number }[],
-  token: string
-): Promise<CheckoutResult> {
-  const res = await fetch(`${API_BASE}/pos/checkout`, {
+async function searchProducts(query: string): Promise<Product[]> {
+  const params = new URLSearchParams({ search: query, limit: "10" });
+  const res = await authenticatedFetch(`${API_BASE}/products?${params}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const rows = Array.isArray(data) ? data : (data.products ?? []);
+  return rows.map((row: Record<string, unknown>) => normalizeProduct(row));
+}
+
+async function postCheckout(items: { productId: string; quantity: number }[]): Promise<CheckoutResult> {
+  const res = await authenticatedFetch(`${API_BASE}/pos/checkout`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ items, paymentMethod: "cash", currency: "EGP" }),
   });
   const data = await res.json();
@@ -120,13 +135,18 @@ export default function POSPage() {
     searchTimeout.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const token = getAuthToken() ?? "";
-        const results = await searchProducts(q, token);
+        const results = await searchProducts(q);
         setSearchResults(results);
       } finally {
         setIsSearching(false);
       }
     }, 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
   }, []);
 
   // ── Cart operations ──
@@ -187,11 +207,7 @@ export default function POSPage() {
     setIsSubmitting(true);
     setCheckoutError(null);
     try {
-      const token = getAuthToken() ?? "";
-      const result = await postCheckout(
-        cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-        token
-      );
+      const result = await postCheckout(cart.map((i) => ({ productId: i.productId, quantity: i.quantity })));
       setReceipt(result);
       setCart([]);
     } catch (err: unknown) {
@@ -219,11 +235,39 @@ export default function POSPage() {
   };
 
   // ── Print receipt ──
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!receipt) return;
-    const url = `${API_BASE}${receipt.receiptUrl}`;
-    const win = window.open(url, "_blank", "width=400,height=600");
-    win?.addEventListener("load", () => win.print());
+    try {
+      const receiptPath = receipt.receiptUrl.startsWith("/api/")
+        ? receipt.receiptUrl.slice(4)
+        : receipt.receiptUrl;
+      const response = await authenticatedFetch(`${API_BASE}${receiptPath}`);
+      if (!response.ok) {
+        throw new Error("Failed to load receipt");
+      }
+
+      const html = await response.text();
+      const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      const win = window.open(blobUrl, "_blank", "width=420,height=640");
+
+      if (!win) {
+        URL.revokeObjectURL(blobUrl);
+        throw new Error("Popup blocked");
+      }
+
+      win.addEventListener(
+        "load",
+        () => {
+          win.print();
+          window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        },
+        { once: true }
+      );
+    } catch {
+      setCheckoutError(
+        isRTL ? "تعذر فتح الإيصال للطباعة." : "Unable to open the receipt for printing."
+      );
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────────

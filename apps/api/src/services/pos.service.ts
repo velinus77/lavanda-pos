@@ -1,16 +1,16 @@
 import crypto from 'node:crypto';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   db,
   getRawClient,
-  exchangeRates,
   productBatches,
   products,
   receipts,
   saleItems,
   sales,
   stockMovements,
+  users,
 } from '@lavanda/db';
 import { resolveCheckoutExchangeRate } from './exchange-rate.service.js';
 
@@ -31,6 +31,9 @@ export const checkoutSchema = z.object({
 export const listSalesSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
+  date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  cashier_id: z.string().min(1).optional(),
 });
 
 type CheckoutInput = z.infer<typeof checkoutSchema>;
@@ -81,14 +84,66 @@ function getExchangeRateForCurrency(currency: string, exchangeRateOverride?: num
   }
 }
 
+function startOfUtcDay(value: string): Date {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function endOfUtcDay(value: string): Date {
+  return new Date(`${value}T23:59:59.999Z`);
+}
+
 export async function listSales(query: ListSalesInput) {
-  const allSales = await db.select().from(sales).orderBy(desc(sales.createdAt));
-  const total = allSales.length;
   const start = (query.page - 1) * query.limit;
-  const pageSales = allSales.slice(start, start + query.limit);
+  const filters = [eq(sales.status, 'completed')];
+
+  if (query.date_from) {
+    filters.push(gte(sales.createdAt, startOfUtcDay(query.date_from)));
+  }
+
+  if (query.date_to) {
+    filters.push(lte(sales.createdAt, endOfUtcDay(query.date_to)));
+  }
+
+  if (query.cashier_id) {
+    filters.push(eq(sales.cashierId, query.cashier_id));
+  }
+
+  const whereClause = and(...filters);
+  const [countRows, pageSales] = await Promise.all([
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(sales)
+      .where(whereClause),
+    db
+      .select({
+        id: sales.id,
+        receiptNumber: sales.receiptNumber,
+        cashierId: sales.cashierId,
+        cashierName: users.fullName,
+        totalAmount: sales.totalAmount,
+        totalAmountForeign: sales.totalAmountForeign,
+        subtotalForeign: sales.subtotalForeign,
+        currency: sales.currency,
+        exchangeRate: sales.exchangeRate,
+        taxAmount: sales.taxAmount,
+        subtotal: sales.subtotal,
+        paymentMethod: sales.paymentMethod,
+        createdAt: sales.createdAt,
+      })
+      .from(sales)
+      .leftJoin(users, eq(users.id, sales.cashierId))
+      .where(whereClause)
+      .orderBy(desc(sales.createdAt))
+      .limit(query.limit)
+      .offset(start),
+  ]);
+  const total = countRows[0]?.total ?? 0;
 
   return {
-    sales: pageSales,
+    sales: pageSales.map((sale) => ({
+      ...sale,
+      cashierName: sale.cashierName ?? undefined,
+    })),
     total,
     page: query.page,
     limit: query.limit,

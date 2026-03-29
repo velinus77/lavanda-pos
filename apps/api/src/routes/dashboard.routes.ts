@@ -6,7 +6,6 @@ import {
   products,
   saleItems,
   sales,
-  users,
 } from '@lavanda/db';
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import { requireAuth } from '../plugins/auth.js';
@@ -118,6 +117,16 @@ export const dashboardRoutes: FastifyPluginAsync = async (fastify: FastifyInstan
         }
       >();
 
+      for (const product of activeProducts) {
+        stockByProduct.set(product.id, {
+          productId: product.id,
+          productName: product.name,
+          currentQuantity: 0,
+          minStockLevel: product.minStockLevel ?? 0,
+          isControlled: !!product.isControlled,
+        });
+      }
+
       const expiringSoon = activeBatchRows
         .filter((row) => row.expiryDate && row.expiryDate >= now && row.expiryDate <= expiryThreshold)
         .map((row) => ({
@@ -173,31 +182,52 @@ export const dashboardRoutes: FastifyPluginAsync = async (fastify: FastifyInstan
         string,
         { productId: string; productName: string; revenue: number; quantity: number }
       >();
+      const countedSalesByDay = new Set<string>();
+      const countedSalesByPayment = new Set<string>();
+      const countedSalesByCurrency = new Set<string>();
 
       for (const row of weeklySaleRows) {
         const dayKey = row.createdAt ? toDateLabel(row.createdAt) : 'unknown';
         const dayEntry = salesByDay.get(dayKey);
+        const countedDayKey = `${dayKey}:${row.saleId}`;
         if (dayEntry) {
           dayEntry.total += row.lineTotal;
-          dayEntry.transactions += 1;
+          if (!countedSalesByDay.has(countedDayKey)) {
+            dayEntry.transactions += 1;
+            countedSalesByDay.add(countedDayKey);
+          }
         } else {
-          salesByDay.set(dayKey, { total: row.lineTotal, transactions: 1 });
+          salesByDay.set(dayKey, {
+            total: row.lineTotal,
+            transactions: 1,
+          });
+          countedSalesByDay.add(countedDayKey);
         }
 
         const paymentEntry = paymentMix.get(row.paymentMethod);
+        const countedPaymentKey = `${row.paymentMethod}:${row.saleId}`;
         if (paymentEntry) {
           paymentEntry.total += row.lineTotal;
-          paymentEntry.transactions += 1;
+          if (!countedSalesByPayment.has(countedPaymentKey)) {
+            paymentEntry.transactions += 1;
+            countedSalesByPayment.add(countedPaymentKey);
+          }
         } else {
           paymentMix.set(row.paymentMethod, { total: row.lineTotal, transactions: 1 });
+          countedSalesByPayment.add(countedPaymentKey);
         }
 
         const currencyEntry = currencyMix.get(row.currency);
+        const countedCurrencyKey = `${row.currency}:${row.saleId}`;
         if (currencyEntry) {
           currencyEntry.total += row.lineTotal;
-          currencyEntry.transactions += 1;
+          if (!countedSalesByCurrency.has(countedCurrencyKey)) {
+            currencyEntry.transactions += 1;
+            countedSalesByCurrency.add(countedCurrencyKey);
+          }
         } else {
           currencyMix.set(row.currency, { total: row.lineTotal, transactions: 1 });
+          countedSalesByCurrency.add(countedCurrencyKey);
         }
 
         const productKey = row.productId ?? row.productName;
