@@ -101,6 +101,10 @@ function generateBatchId(): string {
   return `batch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
+function isBarcodeUniqueConstraintError(error: unknown): boolean {
+  return error instanceof Error && /unique constraint failed:\s*products\.barcode/i.test(error.message);
+}
+
 export const productsRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /api/products
@@ -305,7 +309,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       // Check for duplicate barcode
       const existingBarcode = await queryDatabase(
         fastify,
-        'SELECT id FROM products WHERE barcode = $1 AND is_active = 1',
+        'SELECT id FROM products WHERE barcode = $1',
         [barcode]
       );
 
@@ -388,6 +392,13 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           details: error.errors.map((e: any) => ({ field: e.path.join('.'), message: e.message }))
         });
       }
+
+      if (isBarcodeUniqueConstraintError(error)) {
+        return reply.code(409).send({
+          error: 'Conflict',
+          message: 'Product with this barcode already exists'
+        });
+      }
       
       fastify.log.error({ err: error }, 'Create product error');
       return reply.code(500).send({
@@ -432,7 +443,7 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
       if (barcode) {
         const existingBarcode = await queryDatabase(
           fastify,
-          'SELECT id FROM products WHERE barcode = $1 AND is_active = 1 AND id != $2',
+          'SELECT id FROM products WHERE barcode = $1 AND id != $2',
           [barcode, id]
         );
         if (existingBarcode.rows.length > 0) {
@@ -575,7 +586,14 @@ export const productsRoutes: FastifyPluginAsync = async (fastify) => {
           details: error.errors.map((e: any) => ({ field: e.path.join('.'), message: e.message }))
         });
       }
-      
+
+      if (isBarcodeUniqueConstraintError(error)) {
+        return reply.code(409).send({
+          error: 'Conflict',
+          message: 'Product with this barcode already exists'
+        });
+      }
+
       fastify.log.error({ err: error }, 'Update product error');
       return reply.code(500).send({
         error: 'Internal Server Error',

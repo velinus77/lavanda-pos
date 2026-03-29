@@ -600,6 +600,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
     setIsSubmitting(true);
     try {
+      const normalizedCategoryId = formData.category_id && categories.some((category) => category.id === formData.category_id)
+        ? formData.category_id
+        : null;
+      const normalizedSupplierId = formData.supplier_id && suppliers.some((supplier) => supplier.id === formData.supplier_id)
+        ? formData.supplier_id
+        : null;
       const url = selectedProduct ? `${apiUrl}/${selectedProduct.id}` : apiUrl;
       const method = selectedProduct ? "PUT" : "POST";
 
@@ -613,8 +619,8 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           name_ar: formData.name_ar.trim(),
           barcode: formData.barcode.trim(),
           description: formData.description_en.trim() || formData.description_ar.trim() || null,
-          category_id: formData.category_id,
-          supplier_id: formData.supplier_id,
+          category_id: normalizedCategoryId,
+          supplier_id: normalizedSupplierId,
           cost_price: formData.cost_price,
           selling_price: formData.sale_price,
           tax_rate: formData.tax_rate / 100,
@@ -625,10 +631,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => null) as { message?: string } | null;
         if (response.status === 409) {
-          throw new Error(t.errorBarcodeExists);
+          throw new Error(errorData?.message || t.errorBarcodeExists);
         }
-        throw new Error(t.saveError);
+        throw new Error(errorData?.message || t.saveError);
       }
 
       await fetchProducts();

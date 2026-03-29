@@ -381,6 +381,7 @@ export default function POSPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const scanTimeout = useRef<NodeJS.Timeout | null>(null);
+  const lastBarcodeSubmissionRef = useRef<{ code: string; timestamp: number } | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const focusSearch = useCallback(() => {
@@ -535,6 +536,13 @@ export default function POSPage() {
   }, [locale]);
 
   const tryBarcodeSubmit = useCallback(async (barcode: string) => {
+    const now = Date.now();
+    const lastSubmission = lastBarcodeSubmissionRef.current;
+    if (lastSubmission && lastSubmission.code === barcode && now - lastSubmission.timestamp < 600) {
+      return true;
+    }
+
+    lastBarcodeSubmissionRef.current = { code: barcode, timestamp: now };
     const token = getTokenForRequest();
     if (!token) return false;
     const product = await fetchProductByBarcode(barcode, token);
@@ -624,6 +632,10 @@ export default function POSPage() {
   const handleSearchKeyDown = useCallback(async (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
+    if (scanTimeout.current) {
+      clearTimeout(scanTimeout.current);
+      scanTimeout.current = null;
+    }
     const trimmed = query.trim();
     if (!trimmed) return;
 
