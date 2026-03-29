@@ -22,3 +22,5 @@ packages/data/
 
 # Additional env files
 apps/web/.env.local
+.gstack/
+.gstack/

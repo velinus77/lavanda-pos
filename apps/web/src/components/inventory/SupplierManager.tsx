@@ -287,9 +287,10 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
 
     setIsSubmitting(true);
     try {
+      const token = getAuthToken();
       const response = await fetch(`${apiUrl}/${selectedSupplier.id}`, {
         method: "DELETE",
-        headers: getAuthHeaders(),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (!response.ok) {

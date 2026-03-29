@@ -25,8 +25,14 @@
   --warning-soft: #f2e9d9;
   --danger: #8c4d40;
   --danger-soft: #f8ebe8;
-  --sidebar: #121a28;
-  --sidebar-foreground: #f5efe5;
+  --sidebar: #f2ede3;
+  --sidebar-foreground: #162033;
+  --sidebar-muted: #6f7685;
+  --sidebar-surface: #fbf7f0;
+  --sidebar-surface-strong: #e7dfd0;
+  --sidebar-border: #d4cbbd;
+  --sidebar-brand-bg: #efe6d5;
+  --sidebar-brand-fg: #8a6736;
   --radius-sm: 12px;
   --radius-md: 16px;
   --radius-lg: 20px;
@@ -60,6 +66,12 @@
   --danger-soft: #351c1b;
   --sidebar: #09111d;
   --sidebar-foreground: #f3eadf;
+  --sidebar-muted: #97a3b8;
+  --sidebar-surface: #121a28;
+  --sidebar-surface-strong: #162133;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-brand-bg: #182235;
+  --sidebar-brand-fg: #d2ae71;
 }
 
 @layer base {

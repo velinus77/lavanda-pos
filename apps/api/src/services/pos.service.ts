@@ -345,6 +345,7 @@ export async function getReceiptHtml(receiptId: string) {
       .replaceAll("'", '&#39;');
 
   const formatMoney = (amount: number, currency = 'EGP') => `${amount.toFixed(2)} ${currency}`;
+  const paymentMethodLabel = saleRow.paymentMethod.charAt(0).toUpperCase() + saleRow.paymentMethod.slice(1);
   const createdAt = saleRow.createdAt ? new Date(saleRow.createdAt).toLocaleString('en-GB') : '';
   const isForeignSale = saleRow.currency !== 'EGP' && saleRow.totalAmountForeign;
 
@@ -630,7 +631,7 @@ export async function getReceiptHtml(receiptId: string) {
         </div>
         <div>
           <span class="meta-label">Payment</span>
-          <span class="meta-value">${escapeHtml(saleRow.paymentMethod)}</span>
+          <span class="meta-value">${escapeHtml(paymentMethodLabel)}</span>
         </div>
         <div>
           <span class="meta-label">Currency</span>

@@ -251,9 +251,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 
     setIsSubmitting(true);
     try {
+      const token = getAuthToken();
       const response = await fetch(`${apiUrl}/${selectedCategory.id}`, {
         method: "DELETE",
-        headers: getAuthHeaders(),
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (!response.ok) {

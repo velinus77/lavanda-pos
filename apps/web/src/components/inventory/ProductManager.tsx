@@ -428,7 +428,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const response = await authenticatedFetch(`${apiUrl}?include_inactive=true`, {
+      const response = await authenticatedFetch(apiUrl, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -649,13 +649,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     try {
       const response = await authenticatedFetch(`${apiUrl}/${selectedProduct.id}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
       if (!response.ok) {
-        throw new Error(t.deleteError);
+        const errorData = await response.json().catch(() => null) as { message?: string } | null;
+        throw new Error(errorData?.message || t.deleteError);
       }
 
       await fetchProducts();

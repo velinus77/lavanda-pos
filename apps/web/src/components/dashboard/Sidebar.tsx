@@ -157,8 +157,8 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
   }, [router, visibleItems]);
 
   const sidebarClasses = `
-    fixed inset-y-0 z-50 w-72 overflow-hidden border-r border-white/5 bg-[#09111d] text-[var(--sidebar-foreground)]
-    shadow-[0_24px_80px_rgba(2,8,20,0.48)] transition-transform duration-300 ease-out
+    fixed inset-y-0 z-50 w-72 overflow-hidden text-[var(--sidebar-foreground)]
+    shadow-[0_24px_80px_rgba(2,8,20,0.18)] dark:shadow-[0_24px_80px_rgba(2,8,20,0.48)] transition-transform duration-300 ease-out
     lg:translate-x-0
     ${isRTL ? 'right-0 border-l border-r-0' : 'left-0'}
     ${isOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'}
@@ -174,24 +174,43 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
         />
       )}
 
-      <aside className={sidebarClasses}>
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,_rgba(18,26,40,0.98)_0%,_rgba(7,13,23,1)_100%)]" />
-        <div className="absolute inset-y-0 right-0 w-px bg-white/10" />
+      <aside
+        className={sidebarClasses}
+        style={{
+          background:
+            'linear-gradient(180deg, color-mix(in srgb, var(--sidebar) 96%, white 4%) 0%, color-mix(in srgb, var(--sidebar-surface) 94%, transparent) 100%)',
+          borderRightColor: isRTL ? undefined : 'color-mix(in srgb, var(--sidebar-border) 90%, transparent)',
+          borderLeftColor: isRTL ? 'color-mix(in srgb, var(--sidebar-border) 90%, transparent)' : undefined,
+        }}
+      >
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent 34%)' }} />
+        <div className="absolute inset-y-0 right-0 w-px" style={{ background: 'color-mix(in srgb, var(--sidebar-border) 78%, transparent)' }} />
         <div className="relative flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-white/8 px-5 py-6">
+          <div className="flex items-center justify-between border-b px-5 py-6" style={{ borderColor: 'color-mix(in srgb, var(--sidebar-border) 82%, transparent)' }}>
             <Link href="/dashboard" className="flex items-center gap-3" onClick={() => onClose()}>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#c8ab76]/25 bg-[#182235] text-lg font-extrabold tracking-[0.16em] text-[#d2ae71]">
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-2xl border text-lg font-extrabold tracking-[0.16em]"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--accent) 22%, transparent)',
+                  background: 'var(--sidebar-brand-bg)',
+                  color: 'var(--sidebar-brand-fg)',
+                }}
+              >
                 L
               </div>
               <div>
-                <p className="text-lg font-semibold tracking-tight text-white">{t.brand}</p>
-                <p className="text-xs uppercase tracking-[0.22em] text-[#b8a58b]">{t.brandSubtitle}</p>
+                <p className="text-lg font-semibold tracking-tight text-[var(--sidebar-foreground)]">{t.brand}</p>
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--sidebar-muted)]">{t.brandSubtitle}</p>
               </div>
             </Link>
 
             <button
               onClick={onClose}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 text-slate-300 transition hover:border-[#c8ab76]/30 hover:text-[#d2ae71] lg:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border transition lg:hidden"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--sidebar-border) 82%, transparent)',
+                color: 'var(--sidebar-muted)',
+              }}
               aria-label={t.closeSidebar}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,15 +220,28 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
           </div>
 
           <div className="px-5 pt-5">
-            <div className="rounded-[28px] border border-white/8 bg-white/[0.03] p-4">
-              <p className="text-xs uppercase tracking-[0.28em] text-[#8f9aad]">{t.role}</p>
+            <div
+              className="rounded-[28px] border p-4"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--sidebar-border) 82%, transparent)',
+                background: 'color-mix(in srgb, var(--sidebar-surface) 92%, transparent)',
+              }}
+            >
+              <p className="text-xs uppercase tracking-[0.28em] text-[var(--sidebar-muted)]">{t.role}</p>
               <div className="mt-3 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#162133] text-sm font-bold text-white">
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl border text-sm font-bold"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--sidebar-border) 82%, transparent)',
+                    background: 'var(--sidebar-surface-strong)',
+                    color: 'var(--sidebar-foreground)',
+                  }}
+                >
                   {user.full_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">{user.full_name}</p>
-                  <p className="truncate text-xs text-[#97a3b8]">{user.email}</p>
+                  <p className="truncate text-sm font-semibold text-[var(--sidebar-foreground)]">{user.full_name}</p>
+                  <p className="truncate text-xs text-[var(--sidebar-muted)]">{user.email}</p>
                 </div>
               </div>
             </div>
@@ -227,16 +259,38 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
                       onClick={() => onClose()}
                       className={`group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
                         isActive
-                          ? 'border border-[#27b485]/18 bg-[linear-gradient(180deg,rgba(15,28,42,0.92),rgba(12,24,36,0.98))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
-                          : 'border border-transparent text-[#c3ccda] hover:border-white/8 hover:bg-white/[0.03] hover:text-white'
+                          ? 'border shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]'
+                          : 'border border-transparent'
                       }`}
+                      style={
+                        isActive
+                          ? {
+                              borderColor: 'color-mix(in srgb, var(--action) 20%, transparent)',
+                              background: 'linear-gradient(180deg, color-mix(in srgb, var(--sidebar-surface) 96%, var(--action) 4%), color-mix(in srgb, var(--sidebar-surface-strong) 94%, var(--action) 6%))',
+                              color: 'var(--sidebar-foreground)',
+                            }
+                          : {
+                              color: 'var(--sidebar-foreground)',
+                            }
+                      }
                     >
                       <span
                         className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${
                           isActive
-                            ? 'bg-[#1f9d73]/16 text-[#5dd0aa]'
-                            : 'bg-white/[0.04] text-[#9eabc0] group-hover:bg-white/[0.06] group-hover:text-white'
+                            ? ''
+                            : ''
                         }`}
+                        style={
+                          isActive
+                            ? {
+                                background: 'color-mix(in srgb, var(--action) 16%, transparent)',
+                                color: 'var(--action-strong)',
+                              }
+                            : {
+                                background: 'color-mix(in srgb, var(--sidebar-surface-strong) 72%, transparent)',
+                                color: 'var(--sidebar-muted)',
+                              }
+                        }
                       >
                         {item.icon}
                       </span>
