@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/dashboard/Sidebar';
-import { User, getCachedUser, getCurrentUser, isAuthenticated, logout } from '@/lib/auth';
+import { User, authenticatedFetch, getCachedUser, getCurrentUser, isAuthenticated, logout } from '@/lib/auth';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { useLocale } from '@/contexts/LocaleProvider';
 
@@ -45,6 +45,9 @@ const shellCopy = {
     openSidebar: '\u0641\u062a\u062d \u0627\u0644\u0642\u0627\u0626\u0645\u0629',
   },
 } as const;
+
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_BASE = RAW_API_BASE.endsWith('/api') ? RAW_API_BASE : `${RAW_API_BASE}/api`;
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
@@ -100,6 +103,68 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     await logout();
     router.replace('/login');
   }, [router]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const routesToWarm = [
+      '/dashboard',
+      '/dashboard/pos',
+      '/dashboard/products',
+      '/dashboard/stock',
+      '/dashboard/sales',
+      '/dashboard/settings',
+    ];
+
+    const warmDashboard = () => {
+      routesToWarm.forEach((route) => {
+        void router.prefetch(route);
+      });
+
+      void import('@/components/inventory/ProductManager');
+      void import('@/components/inventory/StockAdjustment');
+      void import('@/components/inventory/ExpiryMonitor');
+      void import('@/components/admin/SettingsManager');
+      void import('@/app/dashboard/sales/page');
+      void import('@/app/dashboard/pos/page');
+      void import('@/app/dashboard/settings/page');
+
+      const warmRequests = [
+        authenticatedFetch(`${API_BASE}/dashboard/overview`),
+        authenticatedFetch(`${API_BASE}/products?limit=8`),
+        authenticatedFetch(`${API_BASE}/pos?page=1&limit=10`),
+        authenticatedFetch(`${API_BASE}/exchange-rate`),
+        authenticatedFetch(`${API_BASE}/reports/sales?groupBy=day`),
+        authenticatedFetch(`${API_BASE}/settings`),
+        authenticatedFetch(`${API_BASE}/users?limit=1`),
+        authenticatedFetch(`${API_BASE}/exchange-rates`),
+        authenticatedFetch(`${API_BASE}/inventory/alerts`),
+      ];
+
+      void Promise.allSettled(warmRequests);
+    };
+
+    const requestIdle = window.requestIdleCallback?.bind(window);
+    const cancelIdle = window.cancelIdleCallback?.bind(window);
+
+    if (requestIdle) {
+      const idleId = requestIdle(() => {
+        warmDashboard();
+      }, { timeout: 1200 });
+
+      return () => {
+        cancelIdle?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      warmDashboard();
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [router, user]);
 
   if (isLoading) {
     return (
