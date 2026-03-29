@@ -127,12 +127,24 @@ interface HeldSale {
   updatedAt: string;
 }
 
+interface ActiveLaneCache {
+  cart: CartItem[];
+  checkoutCurrency: SupportedCurrency;
+  paymentMethod: PaymentMethod;
+  rateMode: "auto" | "manual";
+  manualRateInput: string;
+  cashReceivedInput: string;
+  recentScans: RecentScanEntry[];
+  lastAddedInfo: LastAddedInfo | null;
+}
+
 type PaymentMethod = "cash" | "card";
 
 const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const API_BASE = RAW_API_BASE.endsWith("/api") ? RAW_API_BASE : `${RAW_API_BASE}/api`;
 const SUPPORTED_CURRENCIES = ["EGP", "USD", "EUR", "GBP", "RUB"] as const;
 type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+const ACTIVE_LANE_CACHE_KEY = "lavanda_pos_active_lane_v1";
 const CARD_SURCHARGE_CONFIG = {
   enabled: true,
   percent: 2.75,
@@ -298,10 +310,9 @@ export default function POSPage() {
         searchMode: "جاهز للمسح",
         fallbackMode: "بحث يدوي",
         lastScanned: "آخر صنف",
-        recentScans: "آخر مسحات",
+        lastAction: "آخر إجراء",
         undo: "تراجع",
         setQty: "حدّد الكمية",
-        voidLine: "إلغاء السطر",
         cart: "السلة",
         activeLane: "العميل الحالي",
         parkSale: "ركّن البيعة",
@@ -364,10 +375,9 @@ export default function POSPage() {
         searchMode: "Scanner ready",
         fallbackMode: "Search mode",
         lastScanned: "Last scanned",
-        recentScans: "Recent scans",
+        lastAction: "Last action",
         undo: "Undo",
         setQty: "Set qty",
-        voidLine: "Void line",
         cart: "Cart",
         activeLane: "Active register lane",
         parkSale: "Park sale",
@@ -427,6 +437,7 @@ export default function POSPage() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showSearchLoader, setShowSearchLoader] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [receipt, setReceipt] = useState<ReceiptSummary | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -453,8 +464,15 @@ export default function POSPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const scanTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchLoaderTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastBarcodeSubmissionRef = useRef<{ code: string; timestamp: number } | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const hasHydratedLaneRef = useRef(false);
+
+  const clearActiveLaneCache = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.removeItem(ACTIVE_LANE_CACHE_KEY);
+  }, []);
 
   const focusSearch = useCallback(() => {
     window.requestAnimationFrame(() => {
@@ -557,8 +575,9 @@ export default function POSPage() {
     setCashReceivedInput("");
     setQuery("");
     setSearchResults([]);
+    clearActiveLaneCache();
     focusSearch();
-  }, [focusSearch]);
+  }, [clearActiveLaneCache, focusSearch]);
 
   const addProductToCart = useCallback((product: Product) => {
     if (product.currentQuantity <= 0) {
@@ -701,6 +720,48 @@ export default function POSPage() {
   }, [focusSearch]);
 
   useEffect(() => {
+    if (hasHydratedLaneRef.current || typeof window === "undefined") return;
+    hasHydratedLaneRef.current = true;
+
+    const raw = window.sessionStorage.getItem(ACTIVE_LANE_CACHE_KEY);
+    if (!raw) return;
+
+    try {
+      const cached = JSON.parse(raw) as ActiveLaneCache;
+      setCart(Array.isArray(cached.cart) ? cached.cart : []);
+      setCheckoutCurrency(cached.checkoutCurrency ?? "EGP");
+      setPaymentMethod(cached.paymentMethod ?? "cash");
+      setRateMode(cached.rateMode ?? "auto");
+      setManualRateInput(cached.manualRateInput ?? "");
+      setCashReceivedInput(cached.cashReceivedInput ?? "");
+      setRecentScans(Array.isArray(cached.recentScans) ? cached.recentScans : []);
+      setLastAddedInfo(cached.lastAddedInfo ?? null);
+    } catch {
+      window.sessionStorage.removeItem(ACTIVE_LANE_CACHE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedLaneRef.current || typeof window === "undefined") return;
+    if (receipt || cart.length === 0) {
+      clearActiveLaneCache();
+      return;
+    }
+
+    const payload: ActiveLaneCache = {
+      cart,
+      checkoutCurrency,
+      paymentMethod,
+      rateMode,
+      manualRateInput,
+      cashReceivedInput,
+      recentScans,
+      lastAddedInfo,
+    };
+    window.sessionStorage.setItem(ACTIVE_LANE_CACHE_KEY, JSON.stringify(payload));
+  }, [cart, cashReceivedInput, checkoutCurrency, clearActiveLaneCache, lastAddedInfo, paymentMethod, rateMode, receipt, recentScans, manualRateInput]);
+
+  useEffect(() => {
     const loadRates = async () => {
       const token = getTokenForRequest();
       if (!token) return;
@@ -720,6 +781,22 @@ export default function POSPage() {
     };
     void loadRates();
   }, []);
+
+  useEffect(() => {
+    if (searchLoaderTimeout.current) {
+      clearTimeout(searchLoaderTimeout.current);
+      searchLoaderTimeout.current = null;
+    }
+
+    if (isSearching) {
+      searchLoaderTimeout.current = setTimeout(() => {
+        setShowSearchLoader(true);
+      }, 180);
+      return;
+    }
+
+    setShowSearchLoader(false);
+  }, [isSearching]);
 
   useEffect(() => {
     if (query.trim().length === 0) {
@@ -850,6 +927,8 @@ export default function POSPage() {
     updateItemQuantity(entry.productId, -entry.quantityAdded);
     setRecentScans((current) => current.filter((scan) => scan.id !== entry.id));
   }, [updateItemQuantity]);
+
+  const latestScan = recentScans[0] ?? null;
 
   const parkCurrentSale = useCallback(async () => {
     if (cart.length === 0) return;
@@ -1076,10 +1155,10 @@ export default function POSPage() {
             </div>
           </div>
 
-          {(scanFeedback || lastAddedInfo || showSearchResults || isSearching) && (
+          {(scanFeedback || lastAddedInfo || showSearchResults || showSearchLoader) && (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
               <div className="lav-data-shell p-4 min-h-[240px]">
-                {isSearching ? (
+                {showSearchLoader ? (
                   <div className="flex h-full items-center justify-center text-sm text-[var(--muted)]">{locale === "ar" ? "بندور على الأصناف..." : "Searching products..."}</div>
                 ) : showSearchResults ? (
                   <div className="space-y-3">
@@ -1202,9 +1281,6 @@ export default function POSPage() {
                         <button type="button" onClick={() => promptSetItemQuantity(item)} className="rounded-full border px-3 py-1.5 font-semibold text-[var(--foreground)] transition" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--surface) 84%, transparent)' }}>
                           {copy.setQty}
                         </button>
-                        <button type="button" onClick={() => removeItem(item.productId)} className="rounded-full border px-3 py-1.5 font-semibold text-[var(--danger)] transition" style={{ borderColor: 'color-mix(in srgb, var(--danger) 24%, transparent)', background: 'color-mix(in srgb, var(--danger) 10%, transparent)' }}>
-                          {copy.voidLine}
-                        </button>
                       </div>
                     </div>
                     <div className="text-right">
@@ -1218,24 +1294,16 @@ export default function POSPage() {
           </div>
 
           <div className="space-y-4 border-t px-5 py-4 xl:bg-[color:color-mix(in_srgb,var(--card)_98%,transparent)]" style={{ borderColor: 'color-mix(in srgb, var(--border) 88%, transparent)' }}>
-            {recentScans.length > 0 && (
-              <div className="space-y-3 rounded-2xl border p-4" style={{ borderColor: 'color-mix(in srgb, var(--border) 88%, transparent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)' }}>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">{copy.recentScans}</p>
+            {latestScan && (
+              <div className="flex items-center justify-between gap-3 rounded-2xl border px-4 py-3" style={{ borderColor: 'color-mix(in srgb, var(--border) 88%, transparent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)' }}>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">{copy.lastAction}</p>
+                  <p className="mt-1 truncate font-semibold text-[var(--foreground)]">{latestScan.name}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">+{latestScan.quantityAdded} · {copy.quantity} {latestScan.lineQuantity}</p>
                 </div>
-                <div className="space-y-2">
-                  {recentScans.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2.5" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--card) 96%, transparent)' }}>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-[var(--foreground)]">{entry.name}</p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">+{entry.quantityAdded} · {copy.quantity} {entry.lineQuantity}</p>
-                      </div>
-                      <button type="button" onClick={() => undoRecentScan(entry)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--surface) 84%, transparent)' }}>
-                        {copy.undo}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <button type="button" onClick={() => undoRecentScan(latestScan)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--surface) 84%, transparent)' }}>
+                  {copy.undo}
+                </button>
               </div>
             )}
 

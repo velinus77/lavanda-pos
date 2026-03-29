@@ -106,16 +106,18 @@ export class ExchangeRateNotFoundError extends Error {
   }
 }
 
+export class InvalidTenderError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
 function resolveSurchargeAmount(input: CheckoutInput, subtotal: number, exchangeRate: number): number {
   if (input.paymentMethod !== 'card') return 0;
-
-  if (input.surchargeAmount !== undefined) {
-    return roundMoney(input.surchargeAmount);
-  }
 
   const checkoutSubtotal = input.currency === 'EGP'
     ? subtotal
@@ -400,8 +402,23 @@ export async function checkoutSale(input: CheckoutInput, cashierId: string) {
     const totalAmount = roundMoney(subtotal + taxAmount + surchargeAmount);
     const subtotalForeign = roundMoney(subtotal / exchangeRate);
     const totalAmountForeign = roundMoney(totalAmount / exchangeRate);
-    const tenderedAmount = input.tenderedAmount !== undefined ? roundMoney(input.tenderedAmount) : undefined;
-    const changeAmount = roundMoney(input.changeAmount ?? 0);
+    const tenderedAmount = input.paymentMethod === 'cash' && input.tenderedAmount !== undefined
+      ? roundMoney(input.tenderedAmount)
+      : undefined;
+    const expectedChangeAmount = tenderedAmount !== undefined
+      ? roundMoney(tenderedAmount - totalAmount)
+      : 0;
+
+    if (input.paymentMethod === 'cash') {
+      if (tenderedAmount === undefined) {
+        throw new InvalidTenderError('Cash received is required for cash checkout');
+      }
+      if (tenderedAmount < totalAmount) {
+        throw new InvalidTenderError('Cash received must cover the total due');
+      }
+    }
+
+    const changeAmount = input.paymentMethod === 'cash' ? expectedChangeAmount : 0;
     const paymentStatus = 'captured';
     const saleState = 'completed';
 

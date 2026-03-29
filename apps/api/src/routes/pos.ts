@@ -17,6 +17,7 @@ import {
   ProductNotFoundError,
   ExpiredBatchError,
   ExchangeRateNotFoundError,
+  InvalidTenderError,
 } from '../services/pos.service.js';
 
 export const posRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
@@ -162,6 +163,12 @@ export const posRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
             error: 'EXCHANGE_RATE_NOT_FOUND',
             message: error.message,
             currency: error.currency,
+          });
+        }
+        if (error instanceof InvalidTenderError) {
+          return reply.code(400).send({
+            error: 'INVALID_TENDER',
+            message: error.message,
           });
         }
         fastify.log.error({ err: error }, 'Checkout error');

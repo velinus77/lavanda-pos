@@ -132,6 +132,8 @@ export default function SalesPage() {
   // Filters
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [appliedDateFrom, setAppliedDateFrom] = useState("");
+  const [appliedDateTo, setAppliedDateTo] = useState("");
 
   // Receipt preview
   const [previewReceiptId, setPreviewReceiptId] = useState<string | null>(null);
@@ -142,16 +144,28 @@ export default function SalesPage() {
     if (!previewReceiptId) return;
     const token = getTokenForRequest();
     if (!token) return;
-    let objectUrl: string;
+    let objectUrl: string | undefined;
+    let cancelled = false;
     authenticatedFetch(`${API_BASE}/pos/receipt/${previewReceiptId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.blob())
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error("Failed to load receipt preview");
+        }
+        return r.blob();
+      })
       .then((blob) => {
+        if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setReceiptBlobUrl(objectUrl);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setReceiptBlobUrl(null);
       });
     return () => {
+      cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       setReceiptBlobUrl(null);
     };
@@ -164,8 +178,8 @@ export default function SalesPage() {
       setFetchError(null);
       try {
         const token = getTokenForRequest() ?? "";
-        const effectiveDateFrom = overrides?.dateFrom !== undefined ? overrides.dateFrom : dateFrom;
-        const effectiveDateTo = overrides?.dateTo !== undefined ? overrides.dateTo : dateTo;
+        const effectiveDateFrom = overrides?.dateFrom !== undefined ? overrides.dateFrom : appliedDateFrom;
+        const effectiveDateTo = overrides?.dateTo !== undefined ? overrides.dateTo : appliedDateTo;
         const [data, analyticsData] = await Promise.all([
           fetchSales(token, {
             page: pageNum,
@@ -193,7 +207,7 @@ export default function SalesPage() {
         setIsFetching(false);
       }
     },
-    [dateFrom, dateTo, isRTL]
+    [appliedDateFrom, appliedDateTo, isRTL]
   );
 
   useEffect(() => {
@@ -201,15 +215,17 @@ export default function SalesPage() {
   }, [isReady, page, loadSales]);
 
   const handleFilter = () => {
+    setAppliedDateFrom(dateFrom);
+    setAppliedDateTo(dateTo);
     setPage(1);
-    loadSales(1);
   };
 
   const handleClearFilter = () => {
     setDateFrom("");
     setDateTo("");
+    setAppliedDateFrom("");
+    setAppliedDateTo("");
     setPage(1);
-    loadSales(1, { dateFrom: "", dateTo: "" });
   };
 
   const totalPages = Math.ceil(total / limit);
