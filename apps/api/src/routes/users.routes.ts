@@ -3,25 +3,44 @@ import { hashPassword } from '../services/auth.service.js';
 import { requireAuth, requireRole } from '../plugins/auth.js';
 import { z } from 'zod';
 import { db, users, roles } from '@lavanda/db';
-import { eq, or, like, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { writeAuditLog } from '../services/audit.service.js';
 
 // Validation schemas
-const createUserSchema = z.object({
-  username: z.string().min(1, 'Username is required').max(50, 'Username must be under 50 characters'),
-  fullName: z.string().min(1, 'Full name is required').max(100, 'Full name must be under 100 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password too long'),
-  role: z.enum(['admin', 'manager', 'cashier'], { message: 'Role must be admin, manager, or cashier' })
-});
+const createUserSchema = z
+  .object({
+    username: z.string().min(1, 'Username is required').max(50, 'Username must be under 50 characters'),
+    fullName: z.string().min(1, 'Full name is required').max(100, 'Full name must be under 100 characters').optional(),
+    full_name: z.string().min(1, 'Full name is required').max(100, 'Full name must be under 100 characters').optional(),
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password too long'),
+    role: z.enum(['admin', 'manager', 'cashier'], { message: 'Role must be admin, manager, or cashier' }),
+  })
+  .transform((data) => ({
+    username: data.username,
+    fullName: data.fullName ?? data.full_name ?? '',
+    email: data.email,
+    password: data.password,
+    role: data.role,
+  }));
 
-const updateUserSchema = z.object({
-  fullName: z.string().min(1).max(100).optional(),
-  email: z.string().email('Invalid email address').optional(),
-  password: z.string().min(8).max(128).optional(),
-  role: z.enum(['admin', 'manager', 'cashier']).optional(),
-  isActive: z.boolean().optional()
-});
+const updateUserSchema = z
+  .object({
+    fullName: z.string().min(1).max(100).optional(),
+    full_name: z.string().min(1).max(100).optional(),
+    email: z.string().email('Invalid email address').optional(),
+    password: z.string().min(8).max(128).optional(),
+    role: z.enum(['admin', 'manager', 'cashier']).optional(),
+    isActive: z.boolean().optional(),
+    is_active: z.boolean().optional(),
+  })
+  .transform((data) => ({
+    fullName: data.fullName ?? data.full_name,
+    email: data.email,
+    password: data.password,
+    role: data.role,
+    isActive: data.isActive ?? data.is_active,
+  }));
 
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),

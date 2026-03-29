@@ -1,11 +1,12 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Modal from '../ui/Modal';
 import { getAuthToken } from '@/lib/auth';
 
 interface User {
-  id: number;
+  id: number | string;
+  username: string;
   full_name: string;
   email: string;
   role: 'admin' | 'manager' | 'cashier';
@@ -15,38 +16,34 @@ interface User {
 }
 
 interface UserFormData {
+  username: string;
   full_name: string;
   email: string;
-  password?: string;
+  password: string;
   role: 'admin' | 'manager' | 'cashier';
 }
 
 interface Translations {
-  // Page titles
   usersManagement: string;
   addUser: string;
   editUser: string;
-  // Table headers
   name: string;
   email: string;
   role: string;
   status: string;
-  created: string;
   lastLogin: string;
   actions: string;
-  // Actions
   edit: string;
   deactivate: string;
   activate: string;
-  deleteUser: string;
-  // Search & pagination
   searchPlaceholder: string;
   showing: string;
   of: string;
   users: string;
   previous: string;
   next: string;
-  // Form labels
+  username: string;
+  usernamePlaceholder: string;
   fullName: string;
   fullNamePlaceholder: string;
   emailLabel: string;
@@ -56,18 +53,11 @@ interface Translations {
   confirmPassword: string;
   confirmPasswordPlaceholder: string;
   selectRole: string;
-  admin: string;
-  manager: string;
-  cashier: string;
-  // Buttons
   cancel: string;
-  save: string;
   create: string;
   update: string;
-  // Status
   active: string;
   inactive: string;
-  // Messages
   confirmDeactivate: string;
   confirmActivate: string;
   loading: string;
@@ -77,6 +67,11 @@ interface Translations {
   successDelete: string;
   passwordsMismatch: string;
   requiredField: string;
+  leaveBlankToKeep: string;
+  invalidEmail: string;
+  shortPassword: string;
+  noUsers: string;
+  authRequired: string;
 }
 
 const translations: Record<'ar' | 'en', Translations> = {
@@ -88,19 +83,19 @@ const translations: Record<'ar' | 'en', Translations> = {
     email: 'Email',
     role: 'Role',
     status: 'Status',
-    created: 'Created',
     lastLogin: 'Last Login',
     actions: 'Actions',
     edit: 'Edit',
     deactivate: 'Deactivate',
     activate: 'Activate',
-    deleteUser: 'Delete',
-    searchPlaceholder: 'Search by name or email...',
+    searchPlaceholder: 'Search by name, username, or email...',
     showing: 'Showing',
     of: 'of',
     users: 'users',
     previous: 'Previous',
     next: 'Next',
+    username: 'Username',
+    usernamePlaceholder: 'Enter username',
     fullName: 'Full Name',
     fullNamePlaceholder: 'Enter full name',
     emailLabel: 'Email',
@@ -110,11 +105,7 @@ const translations: Record<'ar' | 'en', Translations> = {
     confirmPassword: 'Confirm Password',
     confirmPasswordPlaceholder: 'Confirm password',
     selectRole: 'Select Role',
-    admin: 'Admin',
-    manager: 'Manager',
-    cashier: 'Cashier',
     cancel: 'Cancel',
-    save: 'Save',
     create: 'Create',
     update: 'Update',
     active: 'Active',
@@ -125,9 +116,14 @@ const translations: Record<'ar' | 'en', Translations> = {
     error: 'An error occurred',
     successCreate: 'User created successfully',
     successUpdate: 'User updated successfully',
-    successDelete: 'User deleted successfully',
+    successDelete: 'User deactivated successfully',
     passwordsMismatch: 'Passwords do not match',
     requiredField: 'This field is required',
+    leaveBlankToKeep: 'Leave blank to keep current password',
+    invalidEmail: 'Invalid email format',
+    shortPassword: 'Password must be at least 8 characters',
+    noUsers: 'No users found',
+    authRequired: 'Authentication required',
   },
   ar: {
     usersManagement: 'إدارة المستخدمين',
@@ -137,74 +133,120 @@ const translations: Record<'ar' | 'en', Translations> = {
     email: 'البريد الإلكتروني',
     role: 'الدور',
     status: 'الحالة',
-    created: 'تاريخ الإنشاء',
     lastLogin: 'آخر دخول',
     actions: 'الإجراءات',
     edit: 'تعديل',
-    deactivate: 'إلغاء التنشيط',
-    activate: 'تنشيط',
-    deleteUser: 'حذف',
-    searchPlaceholder: 'البحث بالاسم أو البريد...',
+    deactivate: 'إلغاء التفعيل',
+    activate: 'تفعيل',
+    searchPlaceholder: 'ابحث بالاسم أو اسم المستخدم أو البريد الإلكتروني...',
     showing: 'عرض',
     of: 'من',
     users: 'مستخدمين',
     previous: 'السابق',
     next: 'التالي',
+    username: 'اسم المستخدم',
+    usernamePlaceholder: 'أدخل اسم المستخدم',
     fullName: 'الاسم الكامل',
     fullNamePlaceholder: 'أدخل الاسم الكامل',
     emailLabel: 'البريد الإلكتروني',
-    emailPlaceholder: 'أدخل عنوان البريد',
+    emailPlaceholder: 'أدخل عنوان البريد الإلكتروني',
     password: 'كلمة المرور',
     passwordPlaceholder: 'أدخل كلمة المرور',
     confirmPassword: 'تأكيد كلمة المرور',
     confirmPasswordPlaceholder: 'أكد كلمة المرور',
     selectRole: 'اختر الدور',
-    admin: 'مدير',
-    manager: 'مساعد مدير',
-    cashier: 'كاشير',
     cancel: 'إلغاء',
-    save: 'حفظ',
     create: 'إنشاء',
     update: 'تحديث',
     active: 'نشط',
     inactive: 'غير نشط',
-    confirmDeactivate: 'هل أنت متأكد من إلغاء تنشيط هذا المستخدم؟',
-    confirmActivate: 'هل أنت متأكد من تنشيط هذا المستخدم؟',
+    confirmDeactivate: 'هل أنت متأكد من إلغاء تفعيل هذا المستخدم؟',
+    confirmActivate: 'هل أنت متأكد من تفعيل هذا المستخدم؟',
     loading: 'جاري التحميل...',
     error: 'حدث خطأ',
     successCreate: 'تم إنشاء المستخدم بنجاح',
     successUpdate: 'تم تحديث المستخدم بنجاح',
-    successDelete: 'تم حذف المستخدم بنجاح',
-    passwordsMismatch: 'كلمات المرور غير متطابقة',
+    successDelete: 'تم تعطيل المستخدم بنجاح',
+    passwordsMismatch: 'كلمتا المرور غير متطابقتين',
     requiredField: 'هذا الحقل مطلوب',
+    leaveBlankToKeep: 'اتركه فارغًا للاحتفاظ بكلمة المرور الحالية',
+    invalidEmail: 'تنسيق البريد الإلكتروني غير صحيح',
+    shortPassword: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل',
+    noUsers: 'لا يوجد مستخدمون',
+    authRequired: 'يلزم تسجيل الدخول',
   },
 };
 
-const ROLES: Array<'admin' | 'manager' | 'cashier'> = ['admin', 'manager', 'cashier'];
+const ROLES: Array<User['role']> = ['admin', 'manager', 'cashier'];
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/users`;
+
+function normalizeUser(rawUser: Record<string, unknown>): User {
+  return {
+    id: String(rawUser.id ?? ''),
+    username: String(rawUser.username ?? ''),
+    full_name: String(rawUser.full_name ?? rawUser.fullName ?? rawUser.username ?? ''),
+    email: String(rawUser.email ?? ''),
+    role: rawUser.role === 'admin' || rawUser.role === 'manager' || rawUser.role === 'cashier' ? rawUser.role : 'cashier',
+    is_active: Boolean(rawUser.is_active ?? rawUser.isActive ?? true),
+    created_at: String(rawUser.created_at ?? rawUser.createdAt ?? ''),
+    last_login: typeof rawUser.last_login === 'string' ? rawUser.last_login : typeof rawUser.lastLogin === 'string' ? rawUser.lastLogin : undefined,
+  };
+}
+
+const emptyForm: UserFormData = { username: '', full_name: '', email: '', password: '', role: 'cashier' };
+
+function inputClass(theme: 'light' | 'dark', hasError = false) {
+  return `w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+    theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+  } ${hasError ? 'border-red-500' : ''}`;
+}
+
+function FormField({ label, error, theme, children }: { label: string; error?: string; theme: 'light' | 'dark'; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className={theme === 'dark' ? 'mb-1 block text-sm font-medium text-gray-300' : 'mb-1 block text-sm font-medium text-gray-700'}>{label}</label>
+      {children}
+      {error ? <p className="mt-1 text-sm text-red-500">{error}</p> : null}
+    </div>
+  );
+}
+
+function ModalActions({
+  theme,
+  cancelLabel,
+  actionLabel,
+  onCancel,
+  onConfirm,
+}: {
+  theme: 'light' | 'dark';
+  cancelLabel: string;
+  actionLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="mt-6 flex justify-end gap-3">
+      <button
+        onClick={onCancel}
+        className={
+          theme === 'dark'
+            ? 'rounded-lg bg-gray-700 px-4 py-2 font-medium text-gray-300 transition-colors hover:bg-gray-600'
+            : 'rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-300'
+        }
+      >
+        {cancelLabel}
+      </button>
+      <button onClick={onConfirm} className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700">
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
 
 interface UserManagerProps {
   locale?: 'ar' | 'en';
   theme?: 'light' | 'dark';
   accessToken?: string;
-}
-
-function normalizeUser(rawUser: Record<string, unknown>): User {
-  return {
-    id: Number(rawUser.id ?? 0),
-    full_name: String(rawUser.full_name ?? rawUser.fullName ?? rawUser.username ?? ''),
-    email: String(rawUser.email ?? ''),
-    role: (rawUser.role === 'admin' || rawUser.role === 'manager' || rawUser.role === 'cashier'
-      ? rawUser.role
-      : 'cashier'),
-    is_active: Boolean(rawUser.is_active ?? rawUser.isActive ?? true),
-    created_at: String(rawUser.created_at ?? rawUser.createdAt ?? ''),
-    last_login: typeof rawUser.last_login === 'string'
-      ? rawUser.last_login
-      : typeof rawUser.lastLogin === 'string'
-        ? rawUser.lastLogin
-        : undefined,
-  };
 }
 
 export const UserManager: React.FC<UserManagerProps> = ({
@@ -222,44 +264,42 @@ export const UserManager: React.FC<UserManagerProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const usersPerPage = 10;
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  const [formData, setFormData] = useState<UserFormData>({
-    full_name: '',
-    email: '',
-    password: '',
-    role: 'cashier',
-  });
+  const [formData, setFormData] = useState<UserFormData>(emptyForm);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const usersPerPage = 10;
+
+  const fetchHeaders = useCallback((): Record<string, string> => {
+    const token = accessToken ?? getAuthToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, [accessToken]);
 
   const getUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: usersPerPage.toString(),
-        ...(search && { search }),
+        ...(search.trim() ? { search: search.trim() } : {}),
       });
 
-      const token = accessToken ?? getAuthToken();
-      const response = await fetch(`${API_BASE}?${params}`, {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+      const response = await fetch(`${API_BASE}?${params.toString()}`, {
+        headers: fetchHeaders(),
       });
+
       if (!response.ok) {
         if (response.status === 401) {
-          setError('Authentication required');
+          setError(t.authRequired);
           return;
         }
+
         throw new Error('Failed to fetch users');
       }
 
@@ -268,57 +308,46 @@ export const UserManager: React.FC<UserManagerProps> = ({
         ? data.users.map((user: Record<string, unknown>) => normalizeUser(user))
         : [];
 
+      const total = typeof data.total === 'number'
+        ? data.total
+        : typeof data.pagination?.total === 'number'
+          ? data.pagination.total
+          : normalizedUsers.length;
+
+      const pages = typeof data.total_pages === 'number'
+        ? data.total_pages
+        : typeof data.pagination?.totalPages === 'number'
+          ? data.pagination.totalPages
+          : Math.max(1, Math.ceil(total / usersPerPage));
+
       setUsers(normalizedUsers);
-
-      const total =
-        typeof data.total === 'number'
-          ? data.total
-          : typeof data.pagination?.total === 'number'
-            ? data.pagination.total
-            : normalizedUsers.length;
-
-      const totalPagesValue =
-        typeof data.total_pages === 'number'
-          ? data.total_pages
-          : typeof data.pagination?.totalPages === 'number'
-            ? data.pagination.totalPages
-            : Math.max(1, Math.ceil(total / usersPerPage));
-
       setTotalUsers(total);
-      setTotalPages(totalPagesValue);
+      setTotalPages(pages);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.error);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, search, t.error]);
+  }, [currentPage, fetchHeaders, search, t.authRequired, t.error]);
 
   useEffect(() => {
-    getUsers();
+    void getUsers();
   }, [getUsers]);
 
-  const validateForm = (isEdit = false): boolean => {
+  const validateForm = (isEdit = false) => {
     const errors: Record<string, string> = {};
-
-    if (!formData.full_name.trim()) {
-      errors.full_name = t.requiredField;
-    }
-
+    if (!isEdit && !formData.username.trim()) errors.username = t.requiredField;
+    if (!formData.full_name.trim()) errors.full_name = t.requiredField;
     if (!formData.email.trim()) {
       errors.email = t.requiredField;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email format';
+      errors.email = t.invalidEmail;
     }
 
     if (!isEdit || formData.password) {
-      if (!formData.password) {
-        errors.password = t.requiredField;
-      } else if (formData.password.length < 6) {
-        errors.password = 'Password must be at least 6 characters';
-      }
-      if (formData.password && formData.password !== confirmPassword) {
-        errors.confirmPassword = t.passwordsMismatch;
-      }
+      if (!formData.password) errors.password = t.requiredField;
+      else if (formData.password.length < 8) errors.password = t.shortPassword;
+      if (formData.password !== confirmPassword) errors.confirmPassword = t.passwordsMismatch;
     }
 
     setFormErrors(errors);
@@ -326,35 +355,30 @@ export const UserManager: React.FC<UserManagerProps> = ({
   };
 
   const resetForm = () => {
-    setFormData({ full_name: '', email: '', password: '', role: 'cashier' });
+    setFormData(emptyForm);
     setConfirmPassword('');
     setFormErrors({});
   };
 
   const handleAddUser = async () => {
     if (!validateForm(false)) return;
-
     setSubmitting(true);
+
     try {
-      const token = accessToken ?? getAuthToken();
       const response = await fetch(API_BASE, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...fetchHeaders() },
         body: JSON.stringify({
-          full_name: formData.full_name,
-          email: formData.email,
+          username: formData.username.trim(),
+          fullName: formData.full_name.trim(),
+          email: formData.email.trim(),
           password: formData.password,
           role: formData.role,
         }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || t.error);
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || t.error);
 
       await getUsers();
       setIsAddModalOpen(false);
@@ -369,37 +393,30 @@ export const UserManager: React.FC<UserManagerProps> = ({
 
   const handleEditUser = async () => {
     if (!selectedUser || !validateForm(true)) return;
-
     setSubmitting(true);
+
     try {
       const body: Record<string, string> = {
-        full_name: formData.full_name,
-        email: formData.email,
+        fullName: formData.full_name.trim(),
+        email: formData.email.trim(),
         role: formData.role,
       };
-      if (formData.password) {
-        body.password = formData.password;
-      }
 
-      const token = accessToken ?? getAuthToken();
+      if (formData.password) body.password = formData.password;
+
       const response = await fetch(`${API_BASE}/${selectedUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...fetchHeaders() },
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || t.error);
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || t.error);
 
       await getUsers();
       setIsEditModalOpen(false);
-      resetForm();
       setSelectedUser(null);
+      resetForm();
       alert(t.successUpdate);
     } catch (err) {
       alert(err instanceof Error ? err.message : t.error);
@@ -408,22 +425,18 @@ export const UserManager: React.FC<UserManagerProps> = ({
     }
   };
 
-  const handleDeactivateUser = async () => {
+  const handleStatusToggle = async () => {
     if (!selectedUser) return;
 
     try {
-      const token = accessToken ?? getAuthToken();
       const response = await fetch(`${API_BASE}/${selectedUser.id}`, {
-        method: 'DELETE',
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...fetchHeaders() },
+        body: JSON.stringify({ isActive: !selectedUser.is_active }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || t.error);
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || t.error);
 
       await getUsers();
       setIsDeactivateModalOpen(false);
@@ -437,6 +450,7 @@ export const UserManager: React.FC<UserManagerProps> = ({
   const openEditModal = (user: User) => {
     setSelectedUser(user);
     setFormData({
+      username: user.username,
       full_name: user.full_name,
       email: user.email,
       password: '',
@@ -453,12 +467,11 @@ export const UserManager: React.FC<UserManagerProps> = ({
   };
 
   const normalizedSearch = search.trim().toLowerCase();
-
   const filteredUsers = users.filter((user) => {
     const fullName = (user.full_name ?? '').toLowerCase();
     const email = (user.email ?? '').toLowerCase();
-
-    return fullName.includes(normalizedSearch) || email.includes(normalizedSearch);
+    const username = (user.username ?? '').toLowerCase();
+    return fullName.includes(normalizedSearch) || email.includes(normalizedSearch) || username.includes(normalizedSearch);
   });
 
   const formatDate = (dateString?: string) => {
@@ -470,18 +483,15 @@ export const UserManager: React.FC<UserManagerProps> = ({
     });
   };
 
-  const roleLabels: Record<string, Record<string, string>> = {
+  const roleLabels: Record<'ar' | 'en', Record<User['role'], string>> = {
     en: { admin: 'Admin', manager: 'Manager', cashier: 'Cashier' },
     ar: { admin: 'مدير', manager: 'مساعد مدير', cashier: 'كاشير' },
   };
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">
-          {t.usersManagement}
-        </h2>
+        <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">{t.usersManagement}</h2>
         <button
           onClick={() => {
             resetForm();
@@ -489,14 +499,13 @@ export const UserManager: React.FC<UserManagerProps> = ({
           }}
           className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--action)] px-4 py-3 font-semibold text-white shadow-[0_14px_28px_rgba(31,157,115,0.22)] transition-all hover:bg-[var(--action-strong)]"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           {t.addUser}
         </button>
       </div>
 
-      {/* Search */}
       <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_76%,transparent)] p-4">
         <div className="relative">
           <input
@@ -510,29 +519,16 @@ export const UserManager: React.FC<UserManagerProps> = ({
                 : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)]'
             } ${isRTL ? 'pr-4 pl-10' : 'pl-4 pr-10'}`}
           />
-          <svg
-            className={`absolute top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--muted)] ${
-              isRTL ? 'left-3' : 'right-3'
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
+          <svg className={`absolute top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--muted)] ${isRTL ? 'left-3' : 'right-3'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
         {loading ? (
           <div className="p-8 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent"></div>
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
             <p className="mt-2 text-[var(--muted)]">{t.loading}</p>
           </div>
         ) : error ? (
@@ -554,61 +550,24 @@ export const UserManager: React.FC<UserManagerProps> = ({
                 <tbody className="divide-y divide-[var(--border)]">
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center">
-                        <span className="text-[var(--muted)]">
-                          {t.loading}
-                        </span>
-                      </td>
+                      <td colSpan={6} className="px-6 py-8 text-center text-[var(--muted)]">{t.noUsers}</td>
                     </tr>
                   ) : (
                     filteredUsers.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface)_82%,transparent)]"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-medium text-[var(--foreground)]">{user.full_name}</div>
-                        </td>
+                      <tr key={String(user.id)} className="transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface)_82%,transparent)]">
+                        <td className="px-6 py-4 whitespace-nowrap"><div className="font-medium text-[var(--foreground)]">{user.full_name}</div></td>
                         <td className="px-6 py-4 whitespace-nowrap text-[var(--muted)]">{user.email}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            user.role === 'admin'
-                              ? 'bg-[var(--warning-soft)] text-[var(--warning)]'
-                              : user.role === 'manager'
-                              ? 'bg-[var(--info-soft)] text-[var(--info)]'
-                              : 'bg-[var(--action-soft)] text-[var(--action)]'
-                          }`}>
-                            {roleLabels[locale][user.role] || user.role}
-                          </span>
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${user.role === 'admin' ? 'bg-[var(--warning-soft)] text-[var(--warning)]' : user.role === 'manager' ? 'bg-[var(--info-soft)] text-[var(--info)]' : 'bg-[var(--action-soft)] text-[var(--action)]'}`}>{roleLabels[locale][user.role]}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            user.is_active
-                              ? 'bg-[var(--action-soft)] text-[var(--action)]'
-                              : 'bg-[var(--danger-soft)] text-[var(--danger)]'
-                          }`}>
-                            {user.is_active ? t.active : t.inactive}
-                          </span>
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${user.is_active ? 'bg-[var(--action-soft)] text-[var(--action)]' : 'bg-[var(--danger-soft)] text-[var(--danger)]'}`}>{user.is_active ? t.active : t.inactive}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-[var(--muted)]">{formatDate(user.last_login)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => openEditModal(user)}
-                              className="font-medium text-[var(--action)] hover:text-[var(--action-strong)]"
-                            >
-                              {t.edit}
-                            </button>
-                            <button
-                              onClick={() => openDeactivateModal(user)}
-                              className={`font-medium ${
-                                user.is_active
-                                  ? 'text-[var(--danger)] hover:opacity-80'
-                                  : 'text-[var(--action)] hover:opacity-80'
-                              }`}
-                            >
-                              {user.is_active ? t.deactivate : t.activate}
-                            </button>
+                            <button onClick={() => openEditModal(user)} className="font-medium text-[var(--action)] hover:text-[var(--action-strong)]">{t.edit}</button>
+                            <button onClick={() => openDeactivateModal(user)} className={`font-medium ${user.is_active ? 'text-[var(--danger)] hover:opacity-80' : 'text-[var(--action)] hover:opacity-80'}`}>{user.is_active ? t.deactivate : t.activate}</button>
                           </div>
                         </td>
                       </tr>
@@ -618,384 +577,55 @@ export const UserManager: React.FC<UserManagerProps> = ({
               </table>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
+            {totalPages > 1 ? (
               <div className="flex items-center justify-between border-t border-[var(--border)] px-6 py-4">
-                <p className="text-sm text-[var(--muted)]">
-                  {t.showing} {Math.min((currentPage - 1) * usersPerPage + 1, totalUsers)} - {Math.min(currentPage * usersPerPage, totalUsers)} {t.of} {totalUsers} {t.users}
-                </p>
+                <p className="text-sm text-[var(--muted)]">{t.showing} {Math.min((currentPage - 1) * usersPerPage + 1, totalUsers)} - {Math.min(currentPage * usersPerPage, totalUsers)} {t.of} {totalUsers} {t.users}</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
-                      currentPage === 1
-                        ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]'
-                        : 'bg-[var(--action)] text-white hover:bg-[var(--action-strong)]'
-                    }`}
-                  >
-                    {t.previous}
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
-                      currentPage === totalPages
-                        ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]'
-                        : 'bg-[var(--action)] text-white hover:bg-[var(--action-strong)]'
-                    }`}
-                  >
-                    {t.next}
-                  </button>
+                  <button onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1} className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === 1 ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]' : 'bg-[var(--action)] text-white hover:bg-[var(--action-strong)]'}`}>{t.previous}</button>
+                  <button onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages} className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${currentPage === totalPages ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]' : 'bg-[var(--action)] text-white hover:bg-[var(--action-strong)]'}`}>{t.next}</button>
                 </div>
               </div>
-            )}
+            ) : null}
           </>
         )}
       </div>
 
-      {/* Add User Modal */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => {
-          setIsAddModalOpen(false);
-          resetForm();
-        }}
-        title={t.addUser}
-        locale={locale}
-        theme={theme}
-        size="lg"
-      >
+      <Modal isOpen={isAddModalOpen} onClose={() => { setIsAddModalOpen(false); resetForm(); }} title={t.addUser} locale={locale} theme={theme} size="lg">
         <div className="space-y-4">
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.fullName}
-            </label>
-            <input
-              type="text"
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              placeholder={t.fullNamePlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.full_name ? 'border-red-500' : ''}`}
-            />
-            {formErrors.full_name && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.full_name}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.emailLabel}
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder={t.emailPlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.email ? 'border-red-500' : ''}`}
-            />
-            {formErrors.email && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.password}
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder={t.passwordPlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.password ? 'border-red-500' : ''}`}
-            />
-            {formErrors.password && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.confirmPassword}
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder={t.confirmPasswordPlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.confirmPassword ? 'border-red-500' : ''}`}
-            />
-            {formErrors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.selectRole}
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as typeof formData.role })}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            >
-              {ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {roleLabels[locale][role] || role}
-                </option>
-              ))}
+          <FormField label={t.username} error={formErrors.username} theme={theme}><input type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} placeholder={t.usernamePlaceholder} className={inputClass(theme, !!formErrors.username)} /></FormField>
+          <FormField label={t.fullName} error={formErrors.full_name} theme={theme}><input type="text" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} placeholder={t.fullNamePlaceholder} className={inputClass(theme, !!formErrors.full_name)} /></FormField>
+          <FormField label={t.emailLabel} error={formErrors.email} theme={theme}><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder={t.emailPlaceholder} className={inputClass(theme, !!formErrors.email)} /></FormField>
+          <FormField label={t.password} error={formErrors.password} theme={theme}><input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder={t.passwordPlaceholder} className={inputClass(theme, !!formErrors.password)} /></FormField>
+          <FormField label={t.confirmPassword} error={formErrors.confirmPassword} theme={theme}><input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={t.confirmPasswordPlaceholder} className={inputClass(theme, !!formErrors.confirmPassword)} /></FormField>
+          <FormField label={t.selectRole} theme={theme}>
+            <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })} className={inputClass(theme)}>
+              {ROLES.map((role) => <option key={role} value={role}>{roleLabels[locale][role]}</option>)}
             </select>
-          </div>
+          </FormField>
         </div>
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={() => {
-              setIsAddModalOpen(false);
-              resetForm();
-            }}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              theme === 'dark'
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {t.cancel}
-          </button>
-          <button
-            onClick={handleAddUser}
-            disabled={submitting}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {submitting ? t.loading : t.create}
-          </button>
-        </div>
+        <ModalActions theme={theme} cancelLabel={t.cancel} actionLabel={submitting ? t.loading : t.create} onCancel={() => { setIsAddModalOpen(false); resetForm(); }} onConfirm={handleAddUser} />
       </Modal>
 
-      {/* Edit User Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedUser(null);
-          resetForm();
-        }}
-        title={t.editUser}
-        locale={locale}
-        theme={theme}
-        size="lg"
-      >
+      <Modal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setSelectedUser(null); resetForm(); }} title={t.editUser} locale={locale} theme={theme} size="lg">
         <div className="space-y-4">
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.fullName}
-            </label>
-            <input
-              type="text"
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              placeholder={t.fullNamePlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.full_name ? 'border-red-500' : ''}`}
-            />
-            {formErrors.full_name && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.full_name}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.emailLabel}
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder={t.emailPlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.email ? 'border-red-500' : ''}`}
-            />
-            {formErrors.email && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.password} <span className="text-xs text-gray-500">({theme === 'dark' ? 'اتركه فارغاً للحفاظ عليه' : 'Leave blank to keep'})</span>
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder={t.passwordPlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.password ? 'border-red-500' : ''}`}
-            />
-            {formErrors.password && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.confirmPassword}
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder={t.confirmPasswordPlaceholder}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              } ${formErrors.confirmPassword ? 'border-red-500' : ''}`}
-            />
-            {formErrors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium mb-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {t.selectRole}
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as typeof formData.role })}
-              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
-            >
-              {ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {roleLabels[locale][role] || role}
-                </option>
-              ))}
+          <FormField label={t.fullName} error={formErrors.full_name} theme={theme}><input type="text" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} placeholder={t.fullNamePlaceholder} className={inputClass(theme, !!formErrors.full_name)} /></FormField>
+          <FormField label={t.emailLabel} error={formErrors.email} theme={theme}><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder={t.emailPlaceholder} className={inputClass(theme, !!formErrors.email)} /></FormField>
+          <FormField label={`${t.password} (${t.leaveBlankToKeep})`} error={formErrors.password} theme={theme}><input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder={t.passwordPlaceholder} className={inputClass(theme, !!formErrors.password)} /></FormField>
+          <FormField label={t.confirmPassword} error={formErrors.confirmPassword} theme={theme}><input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={t.confirmPasswordPlaceholder} className={inputClass(theme, !!formErrors.confirmPassword)} /></FormField>
+          <FormField label={t.selectRole} theme={theme}>
+            <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })} className={inputClass(theme)}>
+              {ROLES.map((role) => <option key={role} value={role}>{roleLabels[locale][role]}</option>)}
             </select>
-          </div>
+          </FormField>
         </div>
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={() => {
-              setIsEditModalOpen(false);
-              setSelectedUser(null);
-              resetForm();
-            }}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              theme === 'dark'
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {t.cancel}
-          </button>
-          <button
-            onClick={handleEditUser}
-            disabled={submitting}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {submitting ? t.loading : t.update}
-          </button>
-        </div>
+        <ModalActions theme={theme} cancelLabel={t.cancel} actionLabel={submitting ? t.loading : t.update} onCancel={() => { setIsEditModalOpen(false); setSelectedUser(null); resetForm(); }} onConfirm={handleEditUser} />
       </Modal>
 
-      {/* Deactivate/Activate Confirmation Modal */}
-      <Modal
-        isOpen={isDeactivateModalOpen}
-        onClose={() => {
-          setIsDeactivateModalOpen(false);
-          setSelectedUser(null);
-        }}
-        title={selectedUser?.is_active ? t.deactivate : t.activate}
-        locale={locale}
-        theme={theme}
-        size="md"
-      >
-        <p className={`mb-6 ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-        }`}>
-          {selectedUser?.is_active ? t.confirmDeactivate : t.confirmActivate}
-        </p>
-
+      <Modal isOpen={isDeactivateModalOpen} onClose={() => { setIsDeactivateModalOpen(false); setSelectedUser(null); }} title={selectedUser?.is_active ? t.deactivate : t.activate} locale={locale} theme={theme} size="md">
+        <p className={theme === 'dark' ? 'mb-6 text-gray-300' : 'mb-6 text-gray-700'}>{selectedUser?.is_active ? t.confirmDeactivate : t.confirmActivate}</p>
         <div className="flex justify-end gap-3">
-          <button
-            onClick={() => {
-              setIsDeactivateModalOpen(false);
-              setSelectedUser(null);
-            }}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              theme === 'dark'
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {t.cancel}
-          </button>
-          <button
-            onClick={handleDeactivateUser}
-            className={`px-4 py-2 rounded-lg font-medium text-white transition-colors ${
-              selectedUser?.is_active
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {selectedUser?.is_active ? t.deactivate : t.activate}
-          </button>
+          <button onClick={() => { setIsDeactivateModalOpen(false); setSelectedUser(null); }} className={theme === 'dark' ? 'rounded-lg bg-gray-700 px-4 py-2 font-medium text-gray-300 transition-colors hover:bg-gray-600' : 'rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-300'}>{t.cancel}</button>
+          <button onClick={handleStatusToggle} className={`rounded-lg px-4 py-2 font-medium text-white transition-colors ${selectedUser?.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>{selectedUser?.is_active ? t.deactivate : t.activate}</button>
         </div>
       </Modal>
     </div>
@@ -1003,3 +633,4 @@ export const UserManager: React.FC<UserManagerProps> = ({
 };
 
 export default UserManager;
+
