@@ -4,9 +4,14 @@ import type { TokenPayload } from '../services/auth.service.js';
 import { z } from 'zod';
 import {
   checkoutSchema,
+  createSuspendedSaleSchema,
+  suspendedSaleIdSchema,
   listSalesSchema,
   checkoutSale,
+  createSuspendedSale,
+  deleteSuspendedSale,
   listSales,
+  listSuspendedSales,
   getReceiptHtml,
   InsufficientStockError,
   ProductNotFoundError,
@@ -34,6 +39,71 @@ export const posRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
       }
       fastify.log.error({ err: error }, 'List sales error');
       return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to retrieve sales' });
+    }
+  });
+
+  fastify.get('/suspended', { preHandler: [requireAuth, requireRole('cashier', 'manager', 'admin')] }, async (request, reply) => {
+    try {
+      const cashierId = (request.user as TokenPayload).userId;
+      if (!cashierId) {
+        return reply.code(401).send({ error: 'Unauthorized', message: 'Cashier identity not found in token' });
+      }
+
+      const suspended = await listSuspendedSales(cashierId);
+      return reply.code(200).send({ suspended });
+    } catch (error) {
+      fastify.log.error({ err: error }, 'List suspended sales error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to load parked sales' });
+    }
+  });
+
+  fastify.post('/suspended', { preHandler: [requireAuth, requireRole('cashier', 'manager', 'admin')] }, async (request, reply) => {
+    try {
+      const input = createSuspendedSaleSchema.parse(request.body);
+      const cashierId = (request.user as TokenPayload).userId;
+      if (!cashierId) {
+        return reply.code(401).send({ error: 'Unauthorized', message: 'Cashier identity not found in token' });
+      }
+
+      const suspended = await createSuspendedSale(input, cashierId);
+      return reply.code(201).send({ suspended });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'Validation failed',
+          details: error.errors.map((e) => ({ field: e.path.join('.'), message: e.message })),
+        });
+      }
+      fastify.log.error({ err: error }, 'Create suspended sale error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to park sale' });
+    }
+  });
+
+  fastify.delete('/suspended/:id', { preHandler: [requireAuth, requireRole('cashier', 'manager', 'admin')] }, async (request, reply) => {
+    try {
+      const { id } = suspendedSaleIdSchema.parse(request.params);
+      const cashierId = (request.user as TokenPayload).userId;
+      if (!cashierId) {
+        return reply.code(401).send({ error: 'Unauthorized', message: 'Cashier identity not found in token' });
+      }
+
+      const deleted = await deleteSuspendedSale(id, cashierId);
+      if (!deleted) {
+        return reply.code(404).send({ error: 'Not Found', message: 'Parked sale not found' });
+      }
+
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'Validation failed',
+          details: error.errors.map((e) => ({ field: e.path.join('.'), message: e.message })),
+        });
+      }
+      fastify.log.error({ err: error }, 'Delete suspended sale error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to discard parked sale' });
     }
   });
 

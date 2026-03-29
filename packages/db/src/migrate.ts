@@ -104,13 +104,33 @@ async function runMigrations() {
  */
 function tablesMigrationAlreadyApplied(
   client: ReturnType<typeof getRawClient>,
-  _file: string
+  file: string
 ): boolean {
-  // Check for the first core table that the initial migration creates
-  const row = client
-    .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='roles'`)
-    .get() as { name: string } | undefined;
-  return row !== undefined;
+  if (file === '0000_initial_schema.sql') {
+    const row = client
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='roles'`)
+      .get() as { name: string } | undefined;
+    return row !== undefined;
+  }
+
+  if (file === '0001_pos_phase1_transaction_model.sql') {
+    const salePaymentsRow = client
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='sale_payments'`)
+      .get() as { name: string } | undefined;
+    const surchargeColumn = client
+      .prepare(`SELECT name FROM pragma_table_info('sales') WHERE name='surcharge_amount'`)
+      .get() as { name: string } | undefined;
+    return salePaymentsRow !== undefined && surchargeColumn !== undefined;
+  }
+
+  if (file === '0002_pos_phase3_suspended_sales.sql') {
+    const row = client
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='suspended_sales'`)
+      .get() as { name: string } | undefined;
+    return row !== undefined;
+  }
+
+  return false;
 }
 
 // Run migrations

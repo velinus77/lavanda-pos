@@ -7,11 +7,21 @@ import {
   productBatches,
   products,
   receipts,
+  salePayments,
   saleItems,
   sales,
   stockMovements,
+  suspendedSales,
   users,
 } from '@lavanda/db';
+import {
+  DEFAULT_CARD_SURCHARGE_CONFIG,
+  buildReceiptSummary,
+  calculateSurchargePiastres,
+  moneyToPiastres,
+  piastresToMoney,
+  type ReceiptSummary,
+} from '@lavanda/shared/pos';
 import { resolveCheckoutExchangeRate } from './exchange-rate.service.js';
 
 export const checkoutSchema = z.object({
@@ -19,13 +29,16 @@ export const checkoutSchema = z.object({
     productId: z.string().min(1),
     quantity: z.number().int().positive(),
   })).min(1),
-  paymentMethod: z.string().default('cash'),
+  paymentMethod: z.enum(['cash', 'card']).default('cash'),
   currency: z.string().default('EGP'),
   exchangeRate: z.number().positive().optional(),
   exchangeRateOverride: z.number().positive().optional(),
   manualRateApplied: z.boolean().optional(),
   foreignAmount: z.number().nonnegative().optional(),
   egpAmount: z.number().nonnegative().optional(),
+  surchargeAmount: z.number().nonnegative().optional(),
+  tenderedAmount: z.number().nonnegative().optional(),
+  changeAmount: z.number().nonnegative().optional(),
 });
 
 export const listSalesSchema = z.object({
@@ -36,8 +49,33 @@ export const listSalesSchema = z.object({
   cashier_id: z.string().min(1).optional(),
 });
 
+export const suspendedSaleCartItemSchema = z.object({
+  productId: z.string().min(1),
+  name: z.string().min(1),
+  nameAr: z.string().optional(),
+  quantity: z.number().int().positive(),
+  unitPrice: z.number().nonnegative(),
+  subtotal: z.number().nonnegative(),
+  availableQty: z.number().int().nonnegative(),
+});
+
+export const createSuspendedSaleSchema = z.object({
+  label: z.string().trim().min(1).max(120),
+  cart: z.array(suspendedSaleCartItemSchema).min(1),
+  checkoutCurrency: z.enum(['EGP', 'USD', 'EUR', 'GBP', 'RUB']),
+  paymentMethod: z.enum(['cash', 'card']),
+  rateMode: z.enum(['auto', 'manual']),
+  manualRateInput: z.string().default(''),
+  cashReceivedInput: z.string().default(''),
+});
+
+export const suspendedSaleIdSchema = z.object({
+  id: z.string().min(1),
+});
+
 type CheckoutInput = z.infer<typeof checkoutSchema>;
 type ListSalesInput = z.infer<typeof listSalesSchema>;
+type CreateSuspendedSaleInput = z.infer<typeof createSuspendedSaleSchema>;
 
 export class InsufficientStockError extends Error {
   constructor(
@@ -66,6 +104,30 @@ export class ExchangeRateNotFoundError extends Error {
   constructor(public currency: string) {
     super(`Exchange rate not found for currency ${currency}`);
   }
+}
+
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function resolveSurchargeAmount(input: CheckoutInput, subtotal: number, exchangeRate: number): number {
+  if (input.paymentMethod !== 'card') return 0;
+
+  if (input.surchargeAmount !== undefined) {
+    return roundMoney(input.surchargeAmount);
+  }
+
+  const checkoutSubtotal = input.currency === 'EGP'
+    ? subtotal
+    : input.foreignAmount ?? roundMoney(subtotal / exchangeRate);
+
+  const surchargeCheckout = piastresToMoney(
+    calculateSurchargePiastres(moneyToPiastres(checkoutSubtotal), DEFAULT_CARD_SURCHARGE_CONFIG)
+  );
+
+  return input.currency === 'EGP'
+    ? surchargeCheckout
+    : roundMoney(surchargeCheckout * exchangeRate);
 }
 
 function makeId(prefix: string): string {
@@ -126,8 +188,13 @@ export async function listSales(query: ListSalesInput) {
         currency: sales.currency,
         exchangeRate: sales.exchangeRate,
         taxAmount: sales.taxAmount,
+        surchargeAmount: sales.surchargeAmount,
         subtotal: sales.subtotal,
+        tenderedAmount: sales.tenderedAmount,
+        changeAmount: sales.changeAmount,
         paymentMethod: sales.paymentMethod,
+        paymentStatus: sales.paymentStatus,
+        saleState: sales.saleState,
         createdAt: sales.createdAt,
       })
       .from(sales)
@@ -148,6 +215,78 @@ export async function listSales(query: ListSalesInput) {
     page: query.page,
     limit: query.limit,
   };
+}
+
+export async function listSuspendedSales(cashierId: string) {
+  const rows = db
+    .select()
+    .from(suspendedSales)
+    .where(eq(suspendedSales.cashierId, cashierId))
+    .orderBy(desc(suspendedSales.updatedAt))
+    .all();
+
+  return rows.map((row) => ({
+    id: row.id,
+    label: row.label,
+    cart: row.cartSnapshot,
+    checkoutCurrency: row.checkoutCurrency,
+    paymentMethod: row.paymentMethod,
+    rateMode: row.rateMode,
+    manualRateInput: row.manualRateInput,
+    cashReceivedInput: row.cashReceivedInput,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  }));
+}
+
+export async function createSuspendedSale(input: CreateSuspendedSaleInput, cashierId: string) {
+  const now = new Date();
+  const id = makeId('hold');
+
+  db.insert(suspendedSales).values({
+    id,
+    cashierId,
+    label: input.label,
+    cartSnapshot: input.cart,
+    checkoutCurrency: input.checkoutCurrency,
+    paymentMethod: input.paymentMethod,
+    rateMode: input.rateMode,
+    manualRateInput: input.manualRateInput,
+    cashReceivedInput: input.cashReceivedInput,
+    createdAt: now,
+    updatedAt: now,
+  }).run();
+
+  return {
+    id,
+    label: input.label,
+    cart: input.cart,
+    checkoutCurrency: input.checkoutCurrency,
+    paymentMethod: input.paymentMethod,
+    rateMode: input.rateMode,
+    manualRateInput: input.manualRateInput,
+    cashReceivedInput: input.cashReceivedInput,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
+}
+
+export async function deleteSuspendedSale(id: string, cashierId: string) {
+  const existing = db
+    .select()
+    .from(suspendedSales)
+    .where(and(eq(suspendedSales.id, id), eq(suspendedSales.cashierId, cashierId)))
+    .get();
+
+  if (!existing) {
+    return false;
+  }
+
+  db.delete(suspendedSales)
+    .where(and(eq(suspendedSales.id, id), eq(suspendedSales.cashierId, cashierId)))
+    .run();
+
+  return true;
 }
 
 export async function checkoutSale(input: CheckoutInput, cashierId: string) {
@@ -257,9 +396,14 @@ export async function checkoutSale(input: CheckoutInput, cashierId: string) {
       }
     }
 
-    const totalAmount = subtotal + taxAmount;
-    const subtotalForeign = subtotal / exchangeRate;
-    const totalAmountForeign = totalAmount / exchangeRate;
+    const surchargeAmount = resolveSurchargeAmount(input, subtotal, exchangeRate);
+    const totalAmount = roundMoney(subtotal + taxAmount + surchargeAmount);
+    const subtotalForeign = roundMoney(subtotal / exchangeRate);
+    const totalAmountForeign = roundMoney(totalAmount / exchangeRate);
+    const tenderedAmount = input.tenderedAmount !== undefined ? roundMoney(input.tenderedAmount) : undefined;
+    const changeAmount = roundMoney(input.changeAmount ?? 0);
+    const paymentStatus = 'captured';
+    const saleState = 'completed';
 
     db.insert(sales).values({
       id: saleId,
@@ -269,12 +413,20 @@ export async function checkoutSale(input: CheckoutInput, cashierId: string) {
       subtotal,
       discountAmount: 0,
       taxAmount,
+      surchargeAmount,
       totalAmount,
+      tenderedAmount,
+      changeAmount,
       subtotalForeign,
       totalAmountForeign,
       paymentMethod: input.paymentMethod,
+      paymentStatus,
+      saleState,
+      receiptVersion: 1,
       cashierId,
       status: 'completed',
+      parkedAt: null,
+      completedAt: now,
       createdAt: now,
     }).run();
 
@@ -286,6 +438,19 @@ export async function checkoutSale(input: CheckoutInput, cashierId: string) {
         }))
       ).run();
     }
+
+    db.insert(salePayments).values({
+      id: makeId('pay'),
+      saleId,
+      method: input.paymentMethod,
+      amount: totalAmount,
+      status: paymentStatus,
+      reference: null,
+      metadata: tenderedAmount !== undefined || changeAmount > 0
+        ? { tenderedAmount, changeAmount }
+        : null,
+      createdAt: now,
+    }).run();
 
     db.insert(receipts).values({
       id: receiptId,
@@ -300,6 +465,28 @@ export async function checkoutSale(input: CheckoutInput, cashierId: string) {
       createdAt: now,
     }).run();
 
+    const receiptSummary: ReceiptSummary = buildReceiptSummary({
+      receiptNumber,
+      saleId,
+      paymentMethod: input.paymentMethod,
+      currency: input.currency as ReceiptSummary['currency'],
+      exchangeRate,
+      subtotalEgp: subtotal,
+      taxEgp: taxAmount,
+      surchargeEgp: surchargeAmount,
+      totalEgp: totalAmount,
+      tenderedAmountEgp: tenderedAmount,
+      changeAmountEgp: changeAmount,
+      timestamp: now.toISOString(),
+      items: lineItems.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPriceEgp: item.unitPrice,
+        subtotalEgp: item.subtotal,
+      })),
+    });
+
     return {
       sale: {
         id: saleId,
@@ -310,8 +497,14 @@ export async function checkoutSale(input: CheckoutInput, cashierId: string) {
         exchangeRate,
         usedManualExchangeRate,
         taxAmount,
+        surchargeAmount,
         subtotalAmount: subtotal,
         subtotalAmountForeign: subtotalForeign,
+        tenderedAmount,
+        changeAmount,
+        paymentStatus,
+        saleState,
+        receiptVersion: 1,
         createdAt: now.toISOString(),
       },
       items: lineItems.map((item) => ({
@@ -321,6 +514,7 @@ export async function checkoutSale(input: CheckoutInput, cashierId: string) {
         unitPrice: item.unitPrice,
         subtotal: item.subtotal,
       })),
+      receiptSummary,
       receiptUrl: `/api/pos/receipt/${saleId}`,
     };
   });
@@ -344,12 +538,34 @@ export async function getReceiptHtml(receiptId: string) {
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
 
-  const formatMoney = (amount: number, currency = 'EGP') => `${amount.toFixed(2)} ${currency}`;
+  const receiptSummary = buildReceiptSummary({
+    receiptNumber: saleRow.receiptNumber,
+    saleId: saleRow.id,
+    paymentMethod: saleRow.paymentMethod as ReceiptSummary['paymentMethod'],
+    currency: saleRow.currency as ReceiptSummary['currency'],
+    exchangeRate: saleRow.exchangeRate,
+    subtotalEgp: saleRow.subtotal,
+    taxEgp: saleRow.taxAmount,
+    surchargeEgp: saleRow.surchargeAmount,
+    totalEgp: saleRow.totalAmount,
+    tenderedAmountEgp: saleRow.tenderedAmount ?? undefined,
+    changeAmountEgp: saleRow.changeAmount,
+    timestamp: saleRow.createdAt.toISOString(),
+    items: items.map((item) => ({
+      productId: item.productId ?? '',
+      productName: item.productName,
+      quantity: item.quantity,
+      unitPriceEgp: item.unitPrice,
+      subtotalEgp: item.subtotal,
+    })),
+  });
+
+  const formatMoney = (amount: number, currency = receiptSummary.currency) => `${amount.toFixed(2)} ${currency}`;
   const paymentMethodLabel = saleRow.paymentMethod.charAt(0).toUpperCase() + saleRow.paymentMethod.slice(1);
   const createdAt = saleRow.createdAt ? new Date(saleRow.createdAt).toLocaleString('en-GB') : '';
-  const isForeignSale = saleRow.currency !== 'EGP' && saleRow.totalAmountForeign;
+  const isForeignSale = receiptSummary.currency !== 'EGP';
 
-  const rows = items
+  const rows = receiptSummary.items
     .map(
       (item, index) => `
         <tr>
@@ -360,7 +576,7 @@ export async function getReceiptHtml(receiptId: string) {
               <div class="item-meta">${item.quantity} x ${formatMoney(item.unitPrice)}</div>
             </div>
           </td>
-          <td class="item-total">${formatMoney(item.totalAmount)}</td>
+          <td class="item-total">${formatMoney(item.subtotal)}</td>
         </tr>`
     )
     .join('');
@@ -635,7 +851,7 @@ export async function getReceiptHtml(receiptId: string) {
         </div>
         <div>
           <span class="meta-label">Currency</span>
-          <span class="meta-value">${escapeHtml(saleRow.currency)}</span>
+          <span class="meta-value">${escapeHtml(receiptSummary.currency)}</span>
         </div>
       </section>
 
@@ -648,24 +864,39 @@ export async function getReceiptHtml(receiptId: string) {
       <section class="totals">
         <div class="total-row">
           <span>Subtotal</span>
-          <span>${formatMoney(saleRow.subtotal)}</span>
+          <span>${formatMoney(receiptSummary.subtotal)}</span>
         </div>
         <div class="total-row">
           <span>Tax</span>
-          <span>${formatMoney(saleRow.taxAmount)}</span>
+          <span>${formatMoney(receiptSummary.tax)}</span>
         </div>
+        ${receiptSummary.surcharge ? `
+        <div class="total-row">
+          <span>Surcharge</span>
+          <span>${formatMoney(receiptSummary.surcharge)}</span>
+        </div>` : ''}
         <div class="total-row grand">
           <strong>Total</strong>
-          <strong>${formatMoney(saleRow.totalAmount)}</strong>
+          <strong>${formatMoney(receiptSummary.total)}</strong>
         </div>
+        ${receiptSummary.tenderedAmount ? `
+        <div class="total-row">
+          <span>Tendered</span>
+          <span>${formatMoney(receiptSummary.tenderedAmount)}</span>
+        </div>` : ''}
+        ${receiptSummary.changeGiven ? `
+        <div class="total-row">
+          <span>Change</span>
+          <span>${formatMoney(receiptSummary.changeGiven)}</span>
+        </div>` : ''}
         ${
           isForeignSale
             ? `<div class="foreign-card">
                 <p class="foreign-title">Foreign Currency Summary</p>
                 <div class="foreign-grid">
                   <div>
-                    <span class="foreign-label">Paid In ${escapeHtml(saleRow.currency)}</span>
-                    <span class="foreign-value">${formatMoney(saleRow.totalAmountForeign!, saleRow.currency)}</span>
+                    <span class="foreign-label">Paid In ${escapeHtml(receiptSummary.currency)}</span>
+                    <span class="foreign-value">${formatMoney(receiptSummary.total, receiptSummary.currency)}</span>
                   </div>
                   <div>
                     <span class="foreign-label">EGP Equivalent</span>
@@ -673,16 +904,16 @@ export async function getReceiptHtml(receiptId: string) {
                   </div>
                   <div>
                     <span class="foreign-label">Exchange Rate</span>
-                    <span class="foreign-value">1 ${escapeHtml(saleRow.currency)} = ${saleRow.exchangeRate.toFixed(4)} EGP</span>
+                    <span class="foreign-value">1 ${escapeHtml(receiptSummary.currency)} = ${receiptSummary.exchangeRate.toFixed(4)} EGP</span>
                   </div>
                   <div>
-                    <span class="foreign-label">Subtotal In ${escapeHtml(saleRow.currency)}</span>
-                    <span class="foreign-value">${formatMoney(saleRow.subtotalForeign ?? saleRow.totalAmountForeign!, saleRow.currency)}</span>
+                    <span class="foreign-label">Subtotal In ${escapeHtml(receiptSummary.currency)}</span>
+                    <span class="foreign-value">${formatMoney(receiptSummary.subtotal, receiptSummary.currency)}</span>
                   </div>
                 </div>
               </div>
               <div class="foreign">
-                Payment was collected in <strong>${escapeHtml(saleRow.currency)}</strong> and recorded in EGP for accounting.
+                Payment was collected in <strong>${escapeHtml(receiptSummary.currency)}</strong> and recorded in EGP for accounting.
               </div>`
             : ''
         }

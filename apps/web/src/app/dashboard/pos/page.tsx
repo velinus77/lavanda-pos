@@ -6,6 +6,7 @@ import { useLocale } from "@/contexts/LocaleProvider";
 import { useDashboardAccess } from "@/lib/use-dashboard-access";
 import Modal from "@/components/ui/Modal";
 import { calculateSurcharge } from "./surcharge.utils";
+import type { ReceiptSummary } from "@lavanda/shared/pos";
 
 interface Product {
   id: string;
@@ -38,8 +39,14 @@ interface CheckoutResult {
     exchangeRate: number;
     usedManualExchangeRate?: boolean;
     taxAmount: number;
+    surchargeAmount: number;
     subtotalAmount: number;
     subtotalAmountForeign?: number;
+    tenderedAmount?: number;
+    changeAmount: number;
+    paymentStatus: string;
+    saleState: string;
+    receiptVersion: number;
     createdAt: string;
   };
   items: Array<{
@@ -49,6 +56,7 @@ interface CheckoutResult {
     unitPrice: number;
     subtotal: number;
   }>;
+  receiptSummary: ReceiptSummary;
   receiptUrl: string;
 }
 
@@ -97,6 +105,15 @@ interface LastAddedInfo {
   subtotal: number;
 }
 
+interface RecentScanEntry {
+  id: string;
+  productId: string;
+  name: string;
+  quantityAdded: number;
+  lineQuantity: number;
+  timestamp: string;
+}
+
 interface HeldSale {
   id: string;
   label: string;
@@ -106,30 +123,11 @@ interface HeldSale {
   rateMode: "auto" | "manual";
   manualRateInput: string;
   cashReceivedInput: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 type PaymentMethod = "cash" | "card";
-
-interface ReceiptSummaryItem {
-  productId: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  subtotal: number;
-}
-
-interface ReceiptSummary {
-  receiptNumber: string;
-  receiptUrl: string;
-  paymentMethod: PaymentMethod;
-  currency: SupportedCurrency;
-  subtotal: number;
-  surcharge: number;
-  total: number;
-  changeGiven: number | null;
-  timestamp: string;
-  items: ReceiptSummaryItem[];
-}
 
 const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const API_BASE = RAW_API_BASE.endsWith("/api") ? RAW_API_BASE : `${RAW_API_BASE}/api`;
@@ -151,6 +149,10 @@ function parseMoneyInput(value: string): number | null {
 
 function formatInputAmount(value: number): string {
   return value.toFixed(2).replace(".", ",");
+}
+
+function roundAmount(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function formatMoney(value: number, currency: string, locale: "en" | "ar") {
@@ -218,7 +220,10 @@ async function postCheckout(
   exchangeRateOverride?: number,
   foreignAmount?: number,
   egpAmount?: number,
-  manualRateApplied = false
+  manualRateApplied = false,
+  surchargeAmount?: number,
+  tenderedAmount?: number,
+  changeAmount?: number
 ): Promise<CheckoutResult> {
   const response = await authenticatedFetch(`${API_BASE}/pos/checkout`, {
     method: "POST",
@@ -235,11 +240,50 @@ async function postCheckout(
       manualRateApplied,
       foreignAmount,
       egpAmount,
+      surchargeAmount,
+      tenderedAmount,
+      changeAmount,
     }),
   });
   const data = await response.json();
   if (!response.ok) throw data;
   return data;
+}
+
+async function fetchSuspendedSales(token: string): Promise<HeldSale[]> {
+  const response = await authenticatedFetch(`${API_BASE}/pos/suspended`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Failed to load parked sales");
+  const data = await response.json();
+  return Array.isArray(data.suspended) ? data.suspended as HeldSale[] : [];
+}
+
+async function createSuspendedSaleRequest(held: Omit<HeldSale, "id" | "createdAt" | "updatedAt">, token: string): Promise<HeldSale> {
+  const response = await authenticatedFetch(`${API_BASE}/pos/suspended`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(held),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw data;
+  return data.suspended as HeldSale;
+}
+
+async function deleteSuspendedSaleRequest(id: string, token: string): Promise<void> {
+  const response = await authenticatedFetch(`${API_BASE}/pos/suspended/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw data ?? new Error("Failed to discard parked sale");
+  }
 }
 
 export default function POSPage() {
@@ -254,6 +298,10 @@ export default function POSPage() {
         searchMode: "جاهز للمسح",
         fallbackMode: "بحث يدوي",
         lastScanned: "آخر صنف",
+        recentScans: "آخر مسحات",
+        undo: "تراجع",
+        setQty: "حدّد الكمية",
+        voidLine: "إلغاء السطر",
         cart: "السلة",
         activeLane: "العميل الحالي",
         parkSale: "ركّن البيعة",
@@ -299,6 +347,15 @@ export default function POSPage() {
         staleRates: "أسعار الصرف بقالها أكتر من ساعة. راجعها قبل ما تكمّل.",
         missingRate: "لازم تدخل سعر صرف قبل إنهاء البيعة.",
         manualRateValue: "قيمة السعر اليدوي",
+        parkedSalesLoadError: "تعذر تحميل البيعات المركونة.",
+        parkedSalesSaveError: "تعذر ركن البيعة الحالية.",
+        parkedSalesResumeError: "تعذر استرجاع البيعة المركونة.",
+        quantityPrompt: "اكتب الكمية الجديدة لهذا الصنف",
+        laneScanning: "جاهز للمسح",
+        laneTendering: "تجهيز الدفع",
+        laneAwaitingCard: "بانتظار تأكيد الكارت",
+        laneProcessing: "جارٍ التنفيذ",
+        laneCompleted: "اكتملت البيعة",
       }
     : {
         title: "POS Checkout",
@@ -307,6 +364,10 @@ export default function POSPage() {
         searchMode: "Scanner ready",
         fallbackMode: "Search mode",
         lastScanned: "Last scanned",
+        recentScans: "Recent scans",
+        undo: "Undo",
+        setQty: "Set qty",
+        voidLine: "Void line",
         cart: "Cart",
         activeLane: "Active register lane",
         parkSale: "Park sale",
@@ -352,6 +413,15 @@ export default function POSPage() {
         staleRates: "Rates are older than one hour. Review before completing the sale.",
         missingRate: "A manual exchange rate is required before checkout.",
         manualRateValue: "Manual rate value",
+        parkedSalesLoadError: "Failed to load parked sales.",
+        parkedSalesSaveError: "Failed to park the current sale.",
+        parkedSalesResumeError: "Failed to resume the parked sale.",
+        quantityPrompt: "Enter the new quantity for this item",
+        laneScanning: "Scanning",
+        laneTendering: "Tendering",
+        laneAwaitingCard: "Awaiting card",
+        laneProcessing: "Processing",
+        laneCompleted: "Sale complete",
       };
 
   const [query, setQuery] = useState("");
@@ -363,6 +433,7 @@ export default function POSPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [scanFeedback, setScanFeedback] = useState<ScanFeedback | null>(null);
   const [lastAddedInfo, setLastAddedInfo] = useState<LastAddedInfo | null>(null);
+  const [recentScans, setRecentScans] = useState<RecentScanEntry[]>([]);
   const [checkoutCurrency, setCheckoutCurrency] = useState<SupportedCurrency>("EGP");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [isCardConfirmOpen, setIsCardConfirmOpen] = useState(false);
@@ -376,6 +447,7 @@ export default function POSPage() {
   const [manualRateInput, setManualRateInput] = useState("");
   const [cashReceivedInput, setCashReceivedInput] = useState("");
   const [heldSales, setHeldSales] = useState<HeldSale[]>([]);
+  const [isLoadingHeldSales, setIsLoadingHeldSales] = useState(false);
   const [saleCounter, setSaleCounter] = useState(1);
 
   const searchRef = useRef<HTMLInputElement>(null);
@@ -436,6 +508,25 @@ export default function POSPage() {
   const changeDue = paymentMethod === "cash" && cashReceived !== null
     ? Math.max(cashReceived - totalDue, 0)
     : null;
+  const effectiveRateForAmounts = effectiveRate && effectiveRate > 0 ? effectiveRate : 1;
+  const surchargeAmountEgp = roundAmount(checkoutCurrency === "EGP" ? cardSurcharge : cardSurcharge * effectiveRateForAmounts);
+  const tenderedAmountEgp = paymentMethod === "cash" && cashReceived !== null
+    ? roundAmount(checkoutCurrency === "EGP"
+      ? cashReceived
+      : cashReceived * effectiveRateForAmounts)
+    : undefined;
+  const changeAmountEgp = paymentMethod === "cash" && changeDue !== null
+    ? roundAmount(checkoutCurrency === "EGP"
+      ? changeDue
+      : changeDue * effectiveRateForAmounts)
+    : 0;
+  const laneStatus = useMemo(() => {
+    if (isSubmitting) return copy.laneProcessing;
+    if (receipt) return copy.laneCompleted;
+    if (isCardConfirmOpen) return copy.laneAwaitingCard;
+    if (cart.length === 0) return copy.laneScanning;
+    return copy.laneTendering;
+  }, [cart.length, copy.laneAwaitingCard, copy.laneCompleted, copy.laneProcessing, copy.laneScanning, copy.laneTendering, isCardConfirmOpen, isSubmitting, receipt]);
 
   const quickTenderButtons = useMemo(() => {
     if (checkoutCurrency === "EGP" || checkoutCurrency === "RUB") {
@@ -456,6 +547,7 @@ export default function POSPage() {
     setReceipt(null);
     setCheckoutError(null);
     setLastAddedInfo(null);
+    setRecentScans([]);
     setScanFeedback(null);
     setCheckoutCurrency("EGP");
     setPaymentMethod("cash");
@@ -506,6 +598,34 @@ export default function POSPage() {
       unitPrice: product.price,
       subtotal: nextQuantity * product.price,
     });
+    const displayName = locale === "ar" ? product.nameAr || product.name : product.name;
+    setRecentScans((current) => {
+      const now = Date.now();
+      const latest = current[0];
+      if (latest && latest.productId === product.id && now - new Date(latest.timestamp).getTime() < 3000) {
+        return [
+          {
+            ...latest,
+            quantityAdded: latest.quantityAdded + 1,
+            lineQuantity: nextQuantity,
+            timestamp: new Date(now).toISOString(),
+          },
+          ...current.slice(1),
+        ].slice(0, 5);
+      }
+
+      return [
+        {
+          id: crypto.randomUUID(),
+          productId: product.id,
+          name: displayName,
+          quantityAdded: 1,
+          lineQuantity: nextQuantity,
+          timestamp: new Date(now).toISOString(),
+        },
+        ...current,
+      ].slice(0, 5);
+    });
     setScanFeedback({
       tone: "success",
       message: locale === "ar" ? `اتضاف ${product.nameAr || product.name} للسلة.` : `${product.name} added to cart.`,
@@ -535,7 +655,7 @@ export default function POSPage() {
     }
   }, [locale]);
 
-  const tryBarcodeSubmit = useCallback(async (barcode: string) => {
+  const submitBarcode = useCallback(async (barcode: string) => {
     const now = Date.now();
     const lastSubmission = lastBarcodeSubmissionRef.current;
     if (lastSubmission && lastSubmission.code === barcode && now - lastSubmission.timestamp < 600) {
@@ -550,6 +670,31 @@ export default function POSPage() {
     addProductToCart(product);
     return true;
   }, [addProductToCart]);
+
+  const submitSearchInput = useCallback(async (rawValue: string, source: "scanner" | "enter") => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return;
+
+    const looksLikeBarcode = /^\d{6,18}$/.test(trimmed);
+    if (looksLikeBarcode) {
+      const found = await submitBarcode(trimmed);
+      if (!found && source === "enter") {
+        setScanFeedback({
+          tone: "error",
+          message: locale === "ar" ? "الباركود ده مش موجود." : "That barcode was not found.",
+        });
+      }
+      return;
+    }
+
+    if (source === "enter") {
+      if (searchResults[0]) {
+        addProductToCart(searchResults[0]);
+      } else {
+        await runTextSearch(trimmed);
+      }
+    }
+  }, [addProductToCart, locale, runTextSearch, searchResults, submitBarcode]);
 
   useEffect(() => {
     focusSearch();
@@ -578,7 +723,7 @@ export default function POSPage() {
 
   useEffect(() => {
     if (query.trim().length === 0) {
-      setSearchResults([]);
+      setSearchResults((current) => (current.length === 0 ? current : []));
       return;
     }
 
@@ -590,7 +735,7 @@ export default function POSPage() {
 
     if (looksLikeBarcode) {
       scanTimeout.current = setTimeout(() => {
-        void tryBarcodeSubmit(trimmed);
+        void submitSearchInput(trimmed, "scanner");
       }, 140);
       return;
     }
@@ -603,13 +748,39 @@ export default function POSPage() {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
       if (scanTimeout.current) clearTimeout(scanTimeout.current);
     };
-  }, [query, runTextSearch, tryBarcodeSubmit]);
+  }, [query, runTextSearch, submitSearchInput]);
 
   useEffect(() => {
     if (paymentMethod === "cash" && totalInSelectedCurrency !== null && cashReceivedInput.trim().length === 0) {
       updateCashToExact(totalDue);
     }
   }, [paymentMethod, totalDue, totalInSelectedCurrency, cashReceivedInput, updateCashToExact]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    const token = getTokenForRequest();
+    if (!token) return;
+
+    let cancelled = false;
+    setIsLoadingHeldSales(true);
+    void fetchSuspendedSales(token)
+      .then((suspended) => {
+        if (cancelled) return;
+        setHeldSales(suspended);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCheckoutError(copy.parkedSalesLoadError);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setIsLoadingHeldSales(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [copy.parkedSalesLoadError, isReady]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -638,22 +809,8 @@ export default function POSPage() {
     }
     const trimmed = query.trim();
     if (!trimmed) return;
-
-    if (/^\d{6,18}$/.test(trimmed)) {
-      const found = await tryBarcodeSubmit(trimmed);
-      if (!found) {
-        setScanFeedback({
-          tone: "error",
-          message: locale === "ar" ? "الباركود ده مش موجود." : "That barcode was not found.",
-        });
-      }
-      return;
-    }
-
-    if (searchResults[0]) {
-      addProductToCart(searchResults[0]);
-    }
-  }, [addProductToCart, locale, query, searchResults, tryBarcodeSubmit]);
+    await submitSearchInput(trimmed, "enter");
+  }, [query, submitSearchInput]);
 
   const updateItemQuantity = useCallback((productId: string, delta: number) => {
     setCart((current) => current.flatMap((item) => {
@@ -666,65 +823,114 @@ export default function POSPage() {
     focusSearch();
   }, [focusSearch]);
 
+  const setItemQuantity = useCallback((productId: string, nextQuantity: number) => {
+    setCart((current) => current.flatMap((item) => {
+      if (item.productId !== productId) return [item];
+      if (nextQuantity <= 0) return [];
+      const clamped = Math.min(nextQuantity, item.availableQty);
+      return [{ ...item, quantity: clamped, subtotal: clamped * item.unitPrice }];
+    }));
+    focusSearch();
+  }, [focusSearch]);
+
   const removeItem = useCallback((productId: string) => {
     setCart((current) => current.filter((item) => item.productId !== productId));
     focusSearch();
   }, [focusSearch]);
 
-  const parkCurrentSale = useCallback(() => {
-    if (cart.length === 0) return;
-    const held: HeldSale = {
-      id: crypto.randomUUID(),
-      label: locale === "ar" ? `عميل ${saleCounter}` : `Customer ${saleCounter}`,
-      cart,
-      checkoutCurrency,
-      paymentMethod,
-      rateMode,
-      manualRateInput,
-      cashReceivedInput,
-    };
-    setHeldSales((current) => [held, ...current]);
-    setSaleCounter((count) => count + 1);
-    setCart([]);
-    setReceipt(null);
-    setCheckoutError(null);
-    setPaymentMethod("cash");
-    setCashReceivedInput("");
-    setQuery("");
-    setSearchResults([]);
-    focusSearch();
-  }, [cart, cashReceivedInput, checkoutCurrency, focusSearch, locale, manualRateInput, paymentMethod, rateMode, saleCounter]);
+  const promptSetItemQuantity = useCallback((item: CartItem) => {
+    const next = window.prompt(copy.quantityPrompt, String(item.quantity));
+    if (next === null) return;
+    const parsed = Number.parseInt(next, 10);
+    if (!Number.isFinite(parsed)) return;
+    setItemQuantity(item.productId, parsed);
+  }, [copy.quantityPrompt, setItemQuantity]);
 
-  const resumeHeldSale = useCallback((held: HeldSale) => {
-    if (cart.length > 0) {
-      const displaced: HeldSale = {
-        id: crypto.randomUUID(),
-        label: locale === "ar" ? `عميل ${saleCounter}` : `Customer ${saleCounter}`,
+  const undoRecentScan = useCallback((entry: RecentScanEntry) => {
+    updateItemQuantity(entry.productId, -entry.quantityAdded);
+    setRecentScans((current) => current.filter((scan) => scan.id !== entry.id));
+  }, [updateItemQuantity]);
+
+  const parkCurrentSale = useCallback(async () => {
+    if (cart.length === 0) return;
+    const token = getTokenForRequest();
+    if (!token) return;
+
+    const nextLabel = locale === "ar" ? `عميل ${saleCounter}` : `Customer ${saleCounter}`;
+
+    try {
+      const held = await createSuspendedSaleRequest({
+        label: nextLabel,
         cart,
         checkoutCurrency,
         paymentMethod,
         rateMode,
         manualRateInput,
         cashReceivedInput,
-      };
-      setHeldSales((current) => [displaced, ...current.filter((item) => item.id !== held.id)]);
+      }, token);
+      setHeldSales((current) => [held, ...current]);
       setSaleCounter((count) => count + 1);
-    } else {
-      setHeldSales((current) => current.filter((item) => item.id !== held.id));
+      setCart([]);
+      setReceipt(null);
+      setCheckoutError(null);
+      setRecentScans([]);
+      setPaymentMethod("cash");
+      setCashReceivedInput("");
+      setQuery("");
+      setSearchResults([]);
+      focusSearch();
+    } catch {
+      setCheckoutError(copy.parkedSalesSaveError);
     }
+  }, [cart, cashReceivedInput, checkoutCurrency, copy.parkedSalesSaveError, focusSearch, locale, manualRateInput, paymentMethod, rateMode, saleCounter]);
 
-    setCart(held.cart);
-    setCheckoutCurrency(held.checkoutCurrency);
-    setPaymentMethod(held.paymentMethod);
-    setRateMode(held.rateMode);
-    setManualRateInput(held.manualRateInput);
-    setCashReceivedInput(held.cashReceivedInput);
-    setReceipt(null);
-    setCheckoutError(null);
-    setQuery("");
-    setSearchResults([]);
-    focusSearch();
-  }, [cart, cashReceivedInput, checkoutCurrency, focusSearch, locale, manualRateInput, paymentMethod, rateMode, saleCounter]);
+  const resumeHeldSale = useCallback(async (held: HeldSale) => {
+    const token = getTokenForRequest();
+    if (!token) return;
+
+    try {
+      let displaced: HeldSale | null = null;
+
+      if (cart.length > 0) {
+        const nextLabel = locale === "ar" ? `عميل ${saleCounter}` : `Customer ${saleCounter}`;
+        displaced = await createSuspendedSaleRequest({
+          label: nextLabel,
+          cart,
+          checkoutCurrency,
+          paymentMethod,
+          rateMode,
+          manualRateInput,
+          cashReceivedInput,
+        }, token);
+      }
+
+      await deleteSuspendedSaleRequest(held.id, token);
+
+      setHeldSales((current) => {
+        const remaining = current.filter((item) => item.id !== held.id);
+        return displaced ? [displaced, ...remaining] : remaining;
+      });
+
+      if (displaced) {
+        setSaleCounter((count) => count + 1);
+      }
+
+      setCart(held.cart);
+      setCheckoutCurrency(held.checkoutCurrency);
+      setPaymentMethod(held.paymentMethod);
+      setRateMode(held.rateMode);
+      setManualRateInput(held.manualRateInput);
+      setCashReceivedInput(held.cashReceivedInput);
+      setRecentScans([]);
+      setReceipt(null);
+      setCheckoutError(null);
+      setQuery("");
+      setSearchResults([]);
+      focusSearch();
+    } catch {
+      setCheckoutError(copy.parkedSalesResumeError);
+    }
+  }, [cart, cashReceivedInput, checkoutCurrency, copy.parkedSalesResumeError, focusSearch, locale, manualRateInput, paymentMethod, rateMode, saleCounter]);
 
   const handleQuickTender = useCallback((step: string) => {
     if (step === copy.exact) {
@@ -755,28 +961,15 @@ export default function POSPage() {
         checkoutCurrency === "EGP" ? undefined : effectiveRate ?? undefined,
         checkoutCurrency === "EGP" ? undefined : totalInSelectedCurrency,
         subtotalEgp,
-        rateMode === "manual"
+        rateMode === "manual",
+        method === "card" ? surchargeAmountEgp : 0,
+        method === "cash" ? tenderedAmountEgp : undefined,
+        method === "cash" ? changeAmountEgp : 0
       );
-      setReceipt({
-        receiptNumber: result.sale.receiptNumber,
-        receiptUrl: result.receiptUrl,
-        paymentMethod: method,
-        currency: checkoutCurrency,
-        subtotal: baseCheckoutTotal,
-        surcharge: method === "card" ? cardSurcharge : 0,
-        total: method === "card" ? totalDue : baseCheckoutTotal,
-        changeGiven: method === "cash" ? changeDue ?? 0 : null,
-        timestamp: result.sale.createdAt,
-        items: cart.map((item) => ({
-          productId: item.productId,
-          productName: locale === "ar" ? item.nameAr || item.name : item.name,
-          quantity: item.quantity,
-          unitPrice: checkoutCurrency === "EGP" ? item.unitPrice : item.unitPrice / (effectiveRate ?? 1),
-          subtotal: checkoutCurrency === "EGP" ? item.subtotal : item.subtotal / (effectiveRate ?? 1),
-        })),
-      });
+      setReceipt(result.receiptSummary);
       setCart([]);
       setLastAddedInfo(null);
+      setRecentScans([]);
       setScanFeedback({
         tone: "success",
         message: copy.saleCompletedSuccessfully,
@@ -821,240 +1014,27 @@ export default function POSPage() {
 
   const handlePrintReceipt = useCallback(async () => {
     if (!receipt) return;
-    const escapeHtml = (value: string) =>
-      value
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
+    const token = getTokenForRequest();
+    if (!token) return;
 
-    const itemRows = receipt.items
-      .map((item, index) => `
-        <tr>
-          <td class="item-name">
-            <span class="item-index">${String(index + 1).padStart(2, "0")}</span>
-            <div>
-              <div class="item-title">${escapeHtml(item.productName)}</div>
-              <div class="item-meta">${item.quantity} x ${formatMoney(item.unitPrice, receipt.currency, locale)}</div>
-            </div>
-          </td>
-          <td class="item-total">${formatMoney(item.subtotal, receipt.currency, locale)}</td>
-        </tr>
-      `)
-      .join("");
+    try {
+      const response = await authenticatedFetch(`${API_BASE}/pos/receipt/${receipt.saleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const surchargeRow = receipt.paymentMethod === "card"
-      ? `<div class="total-row"><span>${locale === "ar" ? "رسوم الكارت" : "Card surcharge"}</span><span>${formatMoney(receipt.surcharge, receipt.currency, locale)}</span></div>`
-      : "";
+      if (!response.ok) {
+        throw new Error("Failed to print receipt");
+      }
 
-    const changeRow = receipt.changeGiven !== null
-      ? `<div class="meta-block"><span class="meta-label">${locale === "ar" ? "الباقي" : "Change"}</span><span class="meta-value">${formatMoney(receipt.changeGiven, receipt.currency, locale)}</span></div>`
-      : "";
-
-    const html = `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${receipt.receiptNumber}</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --ink: #000000;
-        --muted: #444444;
-        --line: #000000;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        padding: 0;
-        background: #ffffff;
-        color: var(--ink);
-        font-family: "Segoe UI", Arial, sans-serif;
-      }
-      .receipt {
-        width: 302px;
-        margin: 0 auto;
-        background: #ffffff;
-        padding: 10px 10px 14px;
-      }
-      .header {
-        padding: 0 0 10px;
-        border-bottom: 1px dashed var(--line);
-        text-align: center;
-      }
-      .eyebrow {
-        margin: 0 0 6px;
-        color: var(--muted);
-        font-size: 9px;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        font-weight: 700;
-      }
-      .brand h1 {
-        margin: 0;
-        font-size: 26px;
-        line-height: 1.05;
-        letter-spacing: -0.03em;
-        font-weight: 800;
-      }
-      .subbrand {
-        margin-top: 4px;
-        color: var(--muted);
-        font-size: 11px;
-      }
-      .meta,
-      .totals,
-      .footer {
-        padding: 10px 0;
-      }
-      .meta {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px 12px;
-        border-bottom: 1px dashed var(--line);
-      }
-      .meta-label {
-        display: block;
-        color: var(--muted);
-        font-size: 9px;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-        margin-bottom: 3px;
-      }
-      .meta-value {
-        font-size: 12px;
-        font-weight: 600;
-      }
-      .items {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      .items-wrap {
-        padding: 6px 0 4px;
-      }
-      .items tr + tr td {
-        border-top: 1px dotted var(--line);
-      }
-      .item-name,
-      .item-total {
-        padding: 10px 0;
-        vertical-align: top;
-      }
-      .item-name {
-        display: flex;
-        gap: 8px;
-        align-items: flex-start;
-      }
-      .item-index {
-        min-width: 20px;
-        height: 20px;
-        border: 1px solid var(--line);
-        display: inline-grid;
-        place-items: center;
-        background: #ffffff;
-        color: var(--ink);
-        font-size: 10px;
-        font-weight: 700;
-      }
-      .item-title {
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1.3;
-      }
-      .item-meta {
-        margin-top: 3px;
-        color: var(--muted);
-        font-size: 11px;
-      }
-      .item-total {
-        width: 1%;
-        white-space: nowrap;
-        text-align: right;
-        font-size: 12px;
-        font-weight: 700;
-      }
-      .totals {
-        border-top: 1px dashed var(--line);
-        border-bottom: 1px dashed var(--line);
-      }
-      .total-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        font-size: 12px;
-        padding: 4px 0;
-      }
-      .total-row.grand {
-        margin-top: 4px;
-        padding-top: 8px;
-        border-top: 1px solid var(--line);
-        font-size: 14px;
-        font-weight: 800;
-      }
-      .footer {
-        text-align: center;
-        font-size: 11px;
-      }
-      .footer strong {
-        display: block;
-        margin-bottom: 4px;
-      }
-    </style>
-  </head>
-  <body onload="window.print(); setTimeout(() => window.close(), 150);">
-    <div class="receipt">
-      <div class="header">
-        <div class="eyebrow">Pharmacy Operations</div>
-        <div class="brand"><h1>Lavanda</h1></div>
-        <div class="subbrand">Pharmacy POS Receipt</div>
-      </div>
-
-      <div class="meta">
-        <div class="meta-block">
-          <span class="meta-label">${locale === "ar" ? "رقم الإيصال" : "Receipt No."}</span>
-          <span class="meta-value">${receipt.receiptNumber}</span>
-        </div>
-        <div class="meta-block">
-          <span class="meta-label">${locale === "ar" ? "وقت الإصدار" : "Issued At"}</span>
-          <span class="meta-value">${new Date(receipt.timestamp).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB")}</span>
-        </div>
-        <div class="meta-block">
-          <span class="meta-label">${locale === "ar" ? "الدفع" : "Payment"}</span>
-          <span class="meta-value">${receipt.paymentMethod === "card" ? copy.card : copy.cash}</span>
-        </div>
-        <div class="meta-block">
-          <span class="meta-label">${locale === "ar" ? "العملة" : "Currency"}</span>
-          <span class="meta-value">${receipt.currency}</span>
-        </div>
-        ${changeRow}
-      </div>
-
-      <div class="items-wrap">
-        <table class="items">
-          ${itemRows}
-        </table>
-      </div>
-
-      <div class="totals">
-        <div class="total-row"><span>${copy.subtotal}</span><span>${formatMoney(receipt.subtotal, receipt.currency, locale)}</span></div>
-        ${surchargeRow}
-        <div class="total-row grand"><span>${copy.total}</span><span>${formatMoney(receipt.total, receipt.currency, locale)}</span></div>
-      </div>
-
-      <div class="footer">
-        <strong>${locale === "ar" ? "شكرا لاختياركم لافاندا" : "Thank you for choosing Lavanda"}</strong>
-        <span>${locale === "ar" ? "احتفظ بهذا الإيصال للمراجعة أو الاستبدال." : "Keep this receipt for returns, exchanges, and batch traceability."}</span>
-      </div>
-    </div>
-  </body>
-</html>`;
-
-    const blob = new Blob([html], { type: "text/html" });
-    const blobUrl = URL.createObjectURL(blob);
-    window.open(blobUrl, "_blank", "noopener,noreferrer");
-  }, [copy.card, copy.cash, copy.subtotal, copy.total, locale, receipt]);
+      const html = await response.text();
+      const blob = new Blob([html], { type: "text/html" });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to print receipt";
+      setCheckoutError(message);
+    }
+  }, [receipt]);
 
   if (!isReady) return null;
 
@@ -1191,7 +1171,12 @@ export default function POSPage() {
                 <h2 className="text-2xl font-semibold text-[var(--foreground)]">{copy.cart}</h2>
                 <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-slate-950">{cart.length}</span>
               </div>
-              <p className="mt-1 text-sm text-[var(--muted)]">{copy.activeLane}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-sm text-[var(--muted)]">{copy.activeLane}</p>
+                <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--action-strong)]" style={{ borderColor: 'color-mix(in srgb, var(--action) 26%, transparent)', background: 'color-mix(in srgb, var(--action) 10%, transparent)' }}>
+                  {laneStatus}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <button type="button" onClick={parkCurrentSale} className="rounded-full border px-4 py-2 text-[var(--foreground)] transition" style={{ borderColor: 'var(--border)' }}>{copy.parkSale}</button>
@@ -1213,6 +1198,14 @@ export default function POSPage() {
                         <span className="min-w-[1.5rem] text-center font-semibold text-[var(--foreground)]">{item.quantity}</span>
                         <button type="button" onClick={() => updateItemQuantity(item.productId, 1)} className="h-8 w-8 rounded-xl border text-lg text-[var(--foreground)]" style={{ borderColor: 'var(--border)' }}>+</button>
                       </div>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <button type="button" onClick={() => promptSetItemQuantity(item)} className="rounded-full border px-3 py-1.5 font-semibold text-[var(--foreground)] transition" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--surface) 84%, transparent)' }}>
+                          {copy.setQty}
+                        </button>
+                        <button type="button" onClick={() => removeItem(item.productId)} className="rounded-full border px-3 py-1.5 font-semibold text-[var(--danger)] transition" style={{ borderColor: 'color-mix(in srgb, var(--danger) 24%, transparent)', background: 'color-mix(in srgb, var(--danger) 10%, transparent)' }}>
+                          {copy.voidLine}
+                        </button>
+                      </div>
                     </div>
                     <div className="text-right">
                       <button type="button" onClick={() => removeItem(item.productId)} className="mb-4 text-xl leading-none text-[var(--muted)]">×</button>
@@ -1225,12 +1218,36 @@ export default function POSPage() {
           </div>
 
           <div className="space-y-4 border-t px-5 py-4 xl:bg-[color:color-mix(in_srgb,var(--card)_98%,transparent)]" style={{ borderColor: 'color-mix(in srgb, var(--border) 88%, transparent)' }}>
+            {recentScans.length > 0 && (
+              <div className="space-y-3 rounded-2xl border p-4" style={{ borderColor: 'color-mix(in srgb, var(--border) 88%, transparent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)' }}>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">{copy.recentScans}</p>
+                </div>
+                <div className="space-y-2">
+                  {recentScans.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2.5" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--card) 96%, transparent)' }}>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-[var(--foreground)]">{entry.name}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">+{entry.quantityAdded} · {copy.quantity} {entry.lineQuantity}</p>
+                      </div>
+                      <button type="button" onClick={() => undoRecentScan(entry)} className="rounded-full border px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--surface) 84%, transparent)' }}>
+                        {copy.undo}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {heldSales.length > 0 && (
               <div className="space-y-3 rounded-2xl border p-4" style={{ borderColor: 'color-mix(in srgb, var(--border) 88%, transparent)', background: 'color-mix(in srgb, var(--surface) 90%, transparent)' }}>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">{copy.heldSales}</p>
                   <p className="mt-1 text-sm text-[var(--muted)]">{copy.heldHint}</p>
                 </div>
+                {isLoadingHeldSales && (
+                  <p className="text-sm text-[var(--muted)]">{locale === "ar" ? "بنحمّل البيعات المركونة..." : "Loading parked sales..."}</p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {heldSales.map((held) => {
                     const itemCount = held.cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -1239,6 +1256,7 @@ export default function POSPage() {
                       <button key={held.id} type="button" onClick={() => resumeHeldSale(held)} className="rounded-2xl border px-4 py-3 text-left transition" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--card) 96%, transparent)' }}>
                         <p className="font-semibold text-[var(--foreground)]">{held.label}</p>
                         <p className="mt-1 text-sm text-[var(--muted)]">{itemCount} {itemCount === 1 ? copy.item : copy.items} · {formatMoney(total, "EGP", locale)}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">{new Date(held.updatedAt).toLocaleTimeString(locale === "ar" ? "ar-EG" : "en-US", { hour: "numeric", minute: "2-digit" })}</p>
                       </button>
                     );
                   })}

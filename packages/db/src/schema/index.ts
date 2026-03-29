@@ -276,7 +276,10 @@ export const sales = sqliteTable(
     subtotal: real('subtotal').notNull(), // Total before tax and discount
     discountAmount: real('discount_amount').notNull().default(0), // Total discount in EGP
     taxAmount: real('tax_amount').notNull().default(0), // Total tax in EGP
+    surchargeAmount: real('surcharge_amount').notNull().default(0), // Card or payment surcharge in EGP
     totalAmount: real('total_amount').notNull(), // Final total in EGP
+    tenderedAmount: real('tendered_amount'), // Amount tendered by customer in EGP
+    changeAmount: real('change_amount').notNull().default(0), // Change returned in EGP
     
     // Amounts in checkout currency (derived)
     subtotalForeign: real('subtotal_foreign'), // Subtotal in checkout currency
@@ -284,6 +287,9 @@ export const sales = sqliteTable(
     
     // Payment details
     paymentMethod: text('payment_method').notNull(), // cash, card, transfer, mixed
+    paymentStatus: text('payment_status').notNull().default('captured'), // pending, authorized, captured, failed, refunded
+    saleState: text('sale_state').notNull().default('completed'), // scanning, parked, awaiting_payment, completed, voided
+    receiptVersion: integer('receipt_version').notNull().default(1),
     
     // Customer info (optional)
     customerId: text('customer_id'), // For future customer management
@@ -297,6 +303,8 @@ export const sales = sqliteTable(
     
     // Status
     status: text('status').notNull().default('completed'), // completed, refunded, cancelled
+    parkedAt: integer('parked_at', { mode: 'timestamp' }),
+    completedAt: integer('completed_at', { mode: 'timestamp' }),
     
     notes: text('notes'),
     
@@ -308,6 +316,8 @@ export const sales = sqliteTable(
     receiptNumberIdx: index('sales_receipt_number_idx').on(table.receiptNumber),
     cashierIdx: index('sales_cashier_idx').on(table.cashierId),
     statusIdx: index('sales_status_idx').on(table.status),
+    paymentStatusIdx: index('sales_payment_status_idx').on(table.paymentStatus),
+    saleStateIdx: index('sales_sale_state_idx').on(table.saleState),
     createdAtIdx: index('sales_created_at_idx').on(table.createdAt),
     currencyIdx: index('sales_currency_idx').on(table.currency),
   })
@@ -394,6 +404,69 @@ export const receipts = sqliteTable(
     typeIdx: index('receipts_type_idx').on(table.receiptType),
     receiptNumberIdx: index('receipts_number_idx').on(table.receiptNumber),
     createdAtIdx: index('receipts_created_at_idx').on(table.createdAt),
+  })
+);
+
+// ============== SALE PAYMENTS ==============
+export const salePayments = sqliteTable(
+  'sale_payments',
+  {
+    id: text('id').primaryKey(),
+    saleId: text('sale_id')
+      .notNull()
+      .references(() => sales.id, { onDelete: 'cascade' }),
+    method: text('method').notNull(), // cash, card, transfer, mixed
+    amount: real('amount').notNull(), // Amount captured or tendered in EGP
+    status: text('status').notNull().default('captured'), // pending, authorized, captured, failed, refunded
+    reference: text('reference'),
+    metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown> | null>(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(new Date()),
+  },
+  (table) => ({
+    saleIdx: index('sale_payments_sale_idx').on(table.saleId),
+    methodIdx: index('sale_payments_method_idx').on(table.method),
+    statusIdx: index('sale_payments_status_idx').on(table.status),
+  })
+);
+
+// ============== SUSPENDED SALES ==============
+export const suspendedSales = sqliteTable(
+  'suspended_sales',
+  {
+    id: text('id').primaryKey(),
+    cashierId: text('cashier_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    label: text('label').notNull(),
+    cartSnapshot: text('cart_snapshot', { mode: 'json' })
+      .$type<Array<{
+        productId: string;
+        name: string;
+        nameAr?: string;
+        quantity: number;
+        unitPrice: number;
+        subtotal: number;
+        availableQty: number;
+      }>>()
+      .notNull(),
+    checkoutCurrency: text('checkout_currency').notNull().default('EGP'),
+    paymentMethod: text('payment_method').notNull().default('cash'),
+    rateMode: text('rate_mode').notNull().default('auto'),
+    manualRateInput: text('manual_rate_input').notNull().default(''),
+    cashReceivedInput: text('cash_received_input').notNull().default(''),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(new Date()),
+  },
+  (table) => ({
+    cashierIdx: index('suspended_sales_cashier_idx').on(table.cashierId),
+    updatedAtIdx: index('suspended_sales_updated_at_idx').on(table.updatedAt),
+    createdAtIdx: index('suspended_sales_created_at_idx').on(table.createdAt),
   })
 );
 
@@ -574,6 +647,7 @@ export const salesRelations = relations(sales, ({ one, many }) => ({
   }),
   saleItems: many(saleItems),
   receipts: many(receipts),
+  payments: many(salePayments),
 }));
 
 export const saleItemsRelations = relations(saleItems, ({ one }) => ({
@@ -598,6 +672,20 @@ export const receiptsRelations = relations(receipts, ({ one }) => ({
   }),
   user: one(users, {
     fields: [receipts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const salePaymentsRelations = relations(salePayments, ({ one }) => ({
+  sale: one(sales, {
+    fields: [salePayments.saleId],
+    references: [sales.id],
+  }),
+}));
+
+export const suspendedSalesRelations = relations(suspendedSales, ({ one }) => ({
+  cashier: one(users, {
+    fields: [suspendedSales.cashierId],
     references: [users.id],
   }),
 }));
@@ -637,6 +725,12 @@ export type NewExchangeRate = typeof exchangeRates.$inferInsert;
 
 export type Sale = typeof sales.$inferSelect;
 export type NewSale = typeof sales.$inferInsert;
+
+export type SalePayment = typeof salePayments.$inferSelect;
+export type NewSalePayment = typeof salePayments.$inferInsert;
+
+export type SuspendedSale = typeof suspendedSales.$inferSelect;
+export type NewSuspendedSale = typeof suspendedSales.$inferInsert;
 
 export type SaleItem = typeof saleItems.$inferSelect;
 export type NewSaleItem = typeof saleItems.$inferInsert;
