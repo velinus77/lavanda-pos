@@ -74,15 +74,20 @@ async function queryDatabase(
 ): Promise<{ rows: unknown[] }> {
   void fastify;
   const sqlite = getRawClient();
-  const normalizedQuery = query.replace(/\$\d+/g, '?');
+  const expandedValues: unknown[] = [];
+  const normalizedQuery = query.replace(/\$(\d+)/g, (_match, rawIndex) => {
+    const valueIndex = Number(rawIndex) - 1;
+    expandedValues.push(values[valueIndex]);
+    return '?';
+  });
   const statement = sqlite.prepare(normalizedQuery);
 
   if (/^\s*(insert|update|delete)/i.test(normalizedQuery) && !/\breturning\b/i.test(normalizedQuery)) {
-    statement.run(...values);
+    statement.run(...expandedValues);
     return { rows: [] };
   }
 
-  return { rows: statement.all(...values) as unknown[] };
+  return { rows: statement.all(...expandedValues) as unknown[] };
 }
 
 /**

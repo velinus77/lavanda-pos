@@ -67,6 +67,7 @@ const buildApp = () => {
   app.register(stockRoutes, { prefix: '/api/stock' });
   app.register(settingsRoutes, { prefix: '/api/settings' });
   app.register(posRoutes, { prefix: '/api/pos' });
+  app.register(exchangeRatesRoutes, { prefix: '/api/exchange-rate' });
   app.register(exchangeRatesRoutes, { prefix: '/api/exchange-rates' });
   app.register(reportsRoutes, { prefix: '/api/reports' });
   app.register(dashboardRoutes, { prefix: '/api/dashboard' });

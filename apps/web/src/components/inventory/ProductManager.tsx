@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Modal from '../ui/Modal';
-import { getAuthToken } from '@/lib/auth';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import Modal from "../ui/Modal";
+import { authenticatedFetch } from "@/lib/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 interface Category {
   id: string;
@@ -39,6 +39,7 @@ interface Product {
   sku?: string;
   cost_price: number;
   sale_price: number;
+  tax_rate: number;
   compare_at_price?: number;
   category_id?: string;
   category?: Category;
@@ -85,6 +86,9 @@ interface Translations {
   costPriceLabel: string;
   salePriceLabel: string;
   compareAtPriceLabel: string;
+  taxRateLabel?: string;
+  customerPriceLabel?: string;
+  taxHint?: string;
   categoryLabel: string;
   supplierLabel: string;
   isControlledLabel: string;
@@ -120,124 +124,130 @@ interface Translations {
   barcodeScanHint: string;
 }
 
-const translations: Record<'ar' | 'en', Translations> = {
+const translations: Record<"ar" | "en", Translations> = {
   en: {
-    title: 'Products',
-    searchPlaceholder: 'Search by barcode, name (EN/AR)...',
-    searchByBarcode: 'Search by barcode',
-    searchByName: 'Search by name',
-    allCategories: 'All Categories',
-    addButton: 'Add Product',
-    editButton: 'Edit',
-    deleteButton: 'Delete',
-    viewBatches: 'View Batches',
-    hideBatches: 'Hide Batches',
-    noProducts: 'No products found',
-    addModalTitle: 'Add New Product',
-    editModalTitle: 'Edit Product',
-    deleteModalTitle: 'Delete Product',
-    nameEnLabel: 'Name (English)',
-    nameArLabel: 'Name (Arabic)',
-    barcodeLabel: 'Barcode *',
-    skuLabel: 'SKU',
-    costPriceLabel: 'Cost Price',
-    salePriceLabel: 'Sale Price *',
-    compareAtPriceLabel: 'Compare at Price',
-    categoryLabel: 'Category',
-    supplierLabel: 'Supplier',
-    isControlledLabel: 'Controlled Product (requires batch tracking)',
-    minStockLabel: 'Minimum Stock Quantity',
-    descriptionEnLabel: 'Description (English)',
-    descriptionArLabel: 'Description (Arabic)',
-    isActiveLabel: 'Active',
-    saveButton: 'Save',
-    savingButton: 'Saving...',
-    cancelButton: 'Cancel',
-    deleteConfirm: 'Are you sure you want to delete this product? This action cannot be undone.',
-    deleteLoading: 'Deleting...',
-    errorRequired: 'This field is required',
-    errorInvalidNumber: 'Please enter a valid number',
-    errorBarcodeExists: 'Barcode already exists',
-    fetchError: 'Failed to load products',
-    saveError: 'Failed to save product',
-    deleteError: 'Failed to delete product',
-    batchesSection: 'Product Batches',
-    addBatchButton: 'Add Batch',
-    batchNumber: 'Batch Number',
-    batchCost: 'Cost',
-    batchQuantity: 'Quantity',
-    batchExpiry: 'Expiry Date',
-    batchActions: 'Actions',
-    noBatches: 'No batches for this product',
-    expiredBadge: 'Expired',
-    expiringSoonBadge: 'Expiring Soon',
-    stockOkBadge: 'In Stock',
-    fefoOrder: 'FEFO Order',
-    pagination: 'Showing {{from}}-{{to}} of {{total}}',
-    itemsPerPage: 'Items per page',
-    barcodeScanHint: 'Barcode scanner ready - input auto-focused',
+    title: "Products",
+    searchPlaceholder: "Search by barcode, name (EN/AR)...",
+    searchByBarcode: "Search by barcode",
+    searchByName: "Search by name",
+    allCategories: "All Categories",
+    addButton: "Add Product",
+    editButton: "Edit",
+    deleteButton: "Delete",
+    viewBatches: "View Batches",
+    hideBatches: "Hide Batches",
+    noProducts: "No products found",
+    addModalTitle: "Add New Product",
+    editModalTitle: "Edit Product",
+    deleteModalTitle: "Delete Product",
+    nameEnLabel: "Name (English)",
+    nameArLabel: "Name (Arabic)",
+    barcodeLabel: "Barcode *",
+    skuLabel: "SKU",
+    costPriceLabel: "Cost Price (EGP)",
+    salePriceLabel: "Sale Price (EGP) *",
+    compareAtPriceLabel: "Compare at Price (EGP)",
+    taxRateLabel: "Tax Rate (%)",
+    customerPriceLabel: "Customer Pays (incl. tax)",
+    taxHint: "Sale price is before tax. Customer total includes this tax rate.",
+    categoryLabel: "Category",
+    supplierLabel: "Supplier",
+    isControlledLabel: "Controlled Product (requires batch tracking)",
+    minStockLabel: "Minimum Stock Quantity",
+    descriptionEnLabel: "Description (English)",
+    descriptionArLabel: "Description (Arabic)",
+    isActiveLabel: "Active",
+    saveButton: "Save",
+    savingButton: "Saving...",
+    cancelButton: "Cancel",
+    deleteConfirm: "Are you sure you want to delete this product? This action cannot be undone.",
+    deleteLoading: "Deleting...",
+    errorRequired: "This field is required",
+    errorInvalidNumber: "Please enter a valid number",
+    errorBarcodeExists: "Barcode already exists",
+    fetchError: "Failed to load products",
+    saveError: "Failed to save product",
+    deleteError: "Failed to delete product",
+    batchesSection: "Product Batches",
+    addBatchButton: "Add Batch",
+    batchNumber: "Batch Number",
+    batchCost: "Cost",
+    batchQuantity: "Quantity",
+    batchExpiry: "Expiry Date",
+    batchActions: "Actions",
+    noBatches: "No batches for this product",
+    expiredBadge: "Expired",
+    expiringSoonBadge: "Expiring Soon",
+    stockOkBadge: "In Stock",
+    fefoOrder: "FEFO Order",
+    pagination: "Showing {{from}}-{{to}} of {{total}}",
+    itemsPerPage: "Items per page",
+    barcodeScanHint: "Barcode scanner ready - input auto-focused",
   },
   ar: {
-    title: 'المنتجات',
-    searchPlaceholder: 'البحث بالباركود أو الاسم (EN/AR)...',
-    searchByBarcode: 'البحث بالباركود',
-    searchByName: 'البحث بالاسم',
-    allCategories: 'جميع التصنيفات',
-    addButton: 'إضافة منتج',
-    editButton: 'تعديل',
-    deleteButton: 'حذف',
-    viewBatches: 'عرض الدفعات',
-    hideBatches: 'إخفاء الدفعات',
-    noProducts: 'لا توجد منتجات',
-    addModalTitle: 'إضافة منتج جديد',
-    editModalTitle: 'تعديل المنتج',
-    deleteModalTitle: 'حذف المنتج',
-    nameEnLabel: 'الاسم (إنجليزي)',
-    nameArLabel: 'الاسم (عربي)',
-    barcodeLabel: 'الباركود *',
-    skuLabel: 'رمز المنتج',
-    costPriceLabel: 'سعر التكلفة',
-    salePriceLabel: 'سعر البيع *',
-    compareAtPriceLabel: 'سعر المقارنة',
-    categoryLabel: 'التصنيف',
-    supplierLabel: 'المورد',
-    isControlledLabel: 'منتج خاضع للرقابة (يتتبع الدفعات)',
-    minStockLabel: 'الحد الأدنى للكمية',
-    descriptionEnLabel: 'الوصف (إنجليزي)',
-    descriptionArLabel: 'الوصف (عربي)',
-    isActiveLabel: 'نشط',
-    saveButton: 'حفظ',
-    savingButton: 'جاري الحفظ...',
-    cancelButton: 'إلغاء',
-    deleteConfirm: 'هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.',
-    deleteLoading: 'جاري الحذف...',
-    errorRequired: 'هذا الحقل مطلوب',
-    errorInvalidNumber: 'الرجاء إدخال رقم صحيح',
-    errorBarcodeExists: 'الباركود موجود بالفعل',
-    fetchError: 'فشل تحميل المنتجات',
-    saveError: 'فشل حفظ المنتج',
-    deleteError: 'فشل حذف المنتج',
-    batchesSection: 'دفعات المنتج',
-    addBatchButton: 'إضافة دفعة',
-    batchNumber: 'رقم الدفعة',
-    batchCost: 'التكلفة',
-    batchQuantity: 'الكمية',
-    batchExpiry: 'تاريخ الانتهاء',
-    batchActions: 'إجراءات',
-    noBatches: 'لا توجد دفعات لهذا المنتج',
-    expiredBadge: 'منتهي',
-    expiringSoonBadge: 'قرب الانتهاء',
-    stockOkBadge: 'متوفر',
-    fefoOrder: 'ترتيب FEFO',
-    pagination: 'عرض {{from}}-{{to}} من {{total}}',
-    itemsPerPage: 'عناصر لكل صفحة',
-    barcodeScanHint: 'ماسح الباركود جاهز - الإدخال مركّز تلقائياً',
+    title: "الأصناف",
+    searchPlaceholder: "دوّر بالباركود أو اسم الصنف (EN/AR)...",
+    searchByBarcode: "دوّر بالباركود",
+    searchByName: "دوّر بالاسم",
+    allCategories: "كل التصنيفات",
+    addButton: "ضيف صنف",
+    editButton: "تعديل",
+    deleteButton: "حذف",
+    viewBatches: "عرض الدفعات",
+    hideBatches: "إخفاء الدفعات",
+    noProducts: "مفيش أصناف",
+    addModalTitle: "ضيف صنف جديد",
+    editModalTitle: "تعديل الصنف",
+    deleteModalTitle: "حذف الصنف",
+    nameEnLabel: "الاسم (إنجليزي)",
+    nameArLabel: "الاسم (عربي)",
+    barcodeLabel: "الباركود *",
+    skuLabel: "كود الصنف",
+    costPriceLabel: "سعر الشراء (ج.م)",
+    salePriceLabel: "سعر البيع (ج.م) *",
+    compareAtPriceLabel: "سعر المقارنة (ج.م)",
+    taxRateLabel: "نسبة الضريبة (%)",
+    customerPriceLabel: "العميل هيدفع (بالضريبة)",
+    taxHint: "سعر البيع قبل الضريبة، والسعر النهائي بيتحسب بالنسبة دي.",
+    categoryLabel: "التصنيف",
+    supplierLabel: "المورّد",
+    isControlledLabel: "صنف محتاج تتبّع دفعات",
+    minStockLabel: "أقل كمية مطلوبة",
+    descriptionEnLabel: "الوصف (إنجليزي)",
+    descriptionArLabel: "الوصف (عربي)",
+    isActiveLabel: "نشط",
+    saveButton: "احفظ",
+    savingButton: "بنحفظ...",
+    cancelButton: "إلغاء",
+    deleteConfirm: "متأكد إنك عايز تمسح الصنف ده؟ مش هتقدر ترجّعه بعد كده.",
+    deleteLoading: "بنحذف...",
+    errorRequired: "الخانة دي مطلوبة",
+    errorInvalidNumber: "من فضلك اكتب رقم صحيح",
+    errorBarcodeExists: "الباركود متسجل قبل كده",
+    fetchError: "ماقدرناش نحمل الأصناف",
+    saveError: "ماقدرناش نحفظ بيانات الصنف",
+    deleteError: "ماقدرناش نمسح الصنف",
+    batchesSection: "دفعات الصنف",
+    addBatchButton: "ضيف دفعة",
+    batchNumber: "رقم الدفعة",
+    batchCost: "سعر الشراء",
+    batchQuantity: "الكمية",
+    batchExpiry: "تاريخ الانتهاء",
+    batchActions: "إجراءات",
+    noBatches: "مفيش دفعات للصنف ده",
+    expiredBadge: "منتهية",
+    expiringSoonBadge: "قربت تنتهي",
+    stockOkBadge: "متاح",
+    fefoOrder: "ترتيب FEFO",
+    pagination: "عرض {{from}} - {{to}} من {{total}}",
+    itemsPerPage: "عدد العناصر في الصفحة",
+    barcodeScanHint: "ماسح الباركود جاهز، والتركيز على الخانة تلقائي",
   },
 };
 
 export interface ProductManagerProps {
-  locale?: 'ar' | 'en';
-  theme?: 'light' | 'dark';
+  locale?: "ar" | "en";
+  theme?: "light" | "dark";
   apiUrl?: string;
   categoriesApiUrl?: string;
   suppliersApiUrl?: string;
@@ -245,22 +255,22 @@ export interface ProductManagerProps {
 }
 
 export const ProductManager: React.FC<ProductManagerProps> = ({
-  locale = 'en',
-  theme = 'light',
+  locale = "en",
+  theme = "light",
   apiUrl = `${API_BASE}/api/products`,
   categoriesApiUrl = `${API_BASE}/api/categories`,
   suppliersApiUrl = `${API_BASE}/api/suppliers`,
   itemsPerPage = 10,
 }) => {
   const t = translations[locale];
-  const isRTL = locale === 'ar';
+  const isRTL = locale === "ar";
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -277,140 +287,151 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
   // Form states
   const [formData, setFormData] = useState({
-    name_en: '',
-    name_ar: '',
-    barcode: '',
-    sku: '',
+    name_en: "",
+    name_ar: "",
+    barcode: "",
+    sku: "",
     cost_price: 0,
     sale_price: 0,
+    tax_rate: 0,
     compare_at_price: 0,
     category_id: null as string | null,
     supplier_id: null as string | null,
     is_controlled: false,
     min_stock_quantity: 0,
-    description_en: '',
-    description_ar: '',
+    description_en: "",
+    description_ar: "",
     is_active: true,
   });
 
   const [batchFormData, setBatchFormData] = useState({
-    batch_number: '',
+    batch_number: "",
     cost_price: 0,
     current_quantity: 0,
-    expiry_date: '',
+    expiry_date: "",
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getAuthHeaders = useCallback(() => {
-    const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  }, []);
-
   const mapBatch = useCallback((batch: any): ProductBatch => {
     const expiryDate =
-      typeof batch.expiry_date === 'number'
+      typeof batch.expiry_date === "number"
         ? new Date(batch.expiry_date * 1000).toISOString()
-        : typeof batch.expiryDate === 'string'
+        : typeof batch.expiryDate === "string"
           ? batch.expiryDate
           : batch.expiryDate instanceof Date
             ? batch.expiryDate.toISOString()
-            : batch.expiry_date ?? new Date().toISOString();
+            : (batch.expiry_date ?? new Date().toISOString());
     const now = Date.now();
     const expiryMs = new Date(expiryDate).getTime();
     const daysUntilExpiry = Math.ceil((expiryMs - now) / (1000 * 60 * 60 * 24));
 
     return {
       id: String(batch.id),
-      batch_number: batch.batch_number ?? batch.batchNumber ?? '',
+      batch_number: batch.batch_number ?? batch.batchNumber ?? "",
       cost_price: Number(batch.cost_price ?? batch.costPrice ?? 0),
       current_quantity: Number(batch.current_quantity ?? batch.currentQuantity ?? 0),
-      initial_quantity: Number(batch.initial_quantity ?? batch.initialQuantity ?? batch.current_quantity ?? batch.currentQuantity ?? 0),
+      initial_quantity: Number(
+        batch.initial_quantity ??
+          batch.initialQuantity ??
+          batch.current_quantity ??
+          batch.currentQuantity ??
+          0
+      ),
       expiry_date: expiryDate,
       is_expired: daysUntilExpiry < 0,
       days_until_expiry: daysUntilExpiry,
-      created_at: batch.created_at ?? batch.createdAt ?? '',
-      updated_at: batch.updated_at ?? batch.updatedAt ?? '',
+      created_at: batch.created_at ?? batch.createdAt ?? "",
+      updated_at: batch.updated_at ?? batch.updatedAt ?? "",
     };
   }, []);
 
-  const mapProduct = useCallback((product: any): Product => ({
-    id: String(product.id),
-    name_en: product.name_en ?? product.name ?? '',
-    name_ar: product.name_ar ?? '',
-    barcode: product.barcode ?? '',
-    sku: product.sku ?? '',
-    cost_price: Number(product.cost_price ?? product.costPrice ?? 0),
-    sale_price: Number(product.sale_price ?? product.selling_price ?? product.sellingPrice ?? 0),
-    compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : undefined,
-    category_id: product.category_id ? String(product.category_id) : undefined,
-    category:
-      product.category_name || product.category_name_ar
-        ? {
-            id: String(product.category_id ?? ''),
-            name_en: product.category_name ?? '',
-            name_ar: product.category_name_ar ?? '',
-          }
-        : undefined,
-    supplier_id: product.supplier_id ? String(product.supplier_id) : undefined,
-    supplier:
-      product.supplier_name || product.supplier_name_ar
-        ? {
-            id: String(product.supplier_id ?? ''),
-            name_en: product.supplier_name ?? '',
-            name_ar: product.supplier_name_ar ?? '',
-          }
-        : undefined,
-    is_controlled: Boolean(product.is_controlled ?? product.isControlled),
-    min_stock_quantity: Number(product.min_stock_quantity ?? product.min_stock_level ?? product.minStockLevel ?? 0),
-    description_en: product.description_en ?? product.description ?? '',
-    description_ar: product.description_ar ?? '',
-    is_active: Boolean(product.is_active ?? product.isActive ?? true),
-    total_quantity: Number(product.total_quantity ?? product.total_stock ?? 0),
-    batches: Array.isArray(product.batches) ? product.batches.map(mapBatch) : undefined,
-    created_at: product.created_at ?? product.createdAt ?? '',
-    updated_at: product.updated_at ?? product.updatedAt ?? '',
-  }), [mapBatch]);
+  const mapProduct = useCallback(
+    (product: any): Product => ({
+      id: String(product.id),
+      name_en: product.name_en ?? product.name ?? "",
+      name_ar: product.name_ar ?? "",
+      barcode: product.barcode ?? "",
+      sku: product.sku ?? "",
+      cost_price: Number(product.cost_price ?? product.costPrice ?? 0),
+      sale_price: Number(product.sale_price ?? product.selling_price ?? product.sellingPrice ?? 0),
+      tax_rate: Number(product.tax_rate ?? product.taxRate ?? 0) * 100,
+      compare_at_price: product.compare_at_price ? Number(product.compare_at_price) : undefined,
+      category_id: product.category_id ? String(product.category_id) : undefined,
+      category:
+        product.category_name || product.category_name_ar
+          ? {
+              id: String(product.category_id ?? ""),
+              name_en: product.category_name ?? "",
+              name_ar: product.category_name_ar ?? "",
+            }
+          : undefined,
+      supplier_id: product.supplier_id ? String(product.supplier_id) : undefined,
+      supplier:
+        product.supplier_name || product.supplier_name_ar
+          ? {
+              id: String(product.supplier_id ?? ""),
+              name_en: product.supplier_name ?? "",
+              name_ar: product.supplier_name_ar ?? "",
+            }
+          : undefined,
+      is_controlled: Boolean(product.is_controlled ?? product.isControlled),
+      min_stock_quantity: Number(
+        product.min_stock_quantity ?? product.min_stock_level ?? product.minStockLevel ?? 0
+      ),
+      description_en: product.description_en ?? product.description ?? "",
+      description_ar: product.description_ar ?? "",
+      is_active: Boolean(product.is_active ?? product.isActive ?? true),
+      total_quantity: Number(product.total_quantity ?? product.total_stock ?? 0),
+      batches: Array.isArray(product.batches) ? product.batches.map(mapBatch) : undefined,
+      created_at: product.created_at ?? product.createdAt ?? "",
+      updated_at: product.updated_at ?? product.updatedAt ?? "",
+    }),
+    [mapBatch]
+  );
 
   // Fetch categories and suppliers
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch(categoriesApiUrl, {
-        headers: getAuthHeaders(),
+      const response = await authenticatedFetch(categoriesApiUrl, {
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
       if (response.ok) {
         const data = await response.json();
-        setCategories(Array.isArray(data) ? data : data.categories ?? []);
+        setCategories(Array.isArray(data) ? data : (data.categories ?? []));
       }
     } catch (err) {
-      console.error('Failed to fetch categories:', err);
+      console.error("Failed to fetch categories:", err);
     }
-  }, [categoriesApiUrl, getAuthHeaders]);
+  }, [categoriesApiUrl]);
 
   const fetchSuppliers = useCallback(async () => {
     try {
-      const response = await fetch(suppliersApiUrl, {
-        headers: getAuthHeaders(),
+      const response = await authenticatedFetch(suppliersApiUrl, {
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
       if (response.ok) {
         const data = await response.json();
-        setSuppliers(Array.isArray(data) ? data : data.suppliers ?? []);
+        setSuppliers(Array.isArray(data) ? data : (data.suppliers ?? []));
       }
     } catch (err) {
-      console.error('Failed to fetch suppliers:', err);
+      console.error("Failed to fetch suppliers:", err);
     }
-  }, [suppliersApiUrl, getAuthHeaders]);
+  }, [suppliersApiUrl]);
 
   const fetchProducts = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch(`${apiUrl}?include_inactive=true`, {
-        headers: getAuthHeaders(),
+      const response = await authenticatedFetch(`${apiUrl}?include_inactive=true`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
@@ -418,19 +439,21 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       }
 
       const data = (await response.json()) as ProductListResponse | unknown[];
-      const productRows = Array.isArray(data) ? data : data.products ?? [];
+      const productRows = Array.isArray(data) ? data : (data.products ?? []);
       setProducts(productRows.map(mapProduct));
     } catch (err) {
       setError(err instanceof Error ? err.message : t.fetchError);
     } finally {
       setIsLoading(false);
     }
-  }, [apiUrl, getAuthHeaders, mapProduct, t.fetchError]);
+  }, [apiUrl, mapProduct, t.fetchError]);
 
   const fetchProductBatches = useCallback(
     async (productId: string) => {
-      const response = await fetch(`${apiUrl}/${productId}/batches`, {
-        headers: getAuthHeaders(),
+      const response = await authenticatedFetch(`${apiUrl}/${productId}/batches`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
@@ -438,7 +461,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       }
 
       const data = (await response.json()) as ProductBatchesResponse;
-      const batches = Array.isArray(data) ? data : data.batches ?? [];
+      const batches = Array.isArray(data) ? data : (data.batches ?? []);
 
       setProducts((currentProducts) =>
         currentProducts.map((product) =>
@@ -446,7 +469,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
         )
       );
     },
-    [apiUrl, getAuthHeaders, mapBatch, t.fetchError]
+    [apiUrl, mapBatch, t.fetchError]
   );
 
   useEffect(() => {
@@ -467,14 +490,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
   // Filter and paginate products
   const filteredProducts = products.filter((product) => {
     const query = searchQuery.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       product.barcode.toLowerCase().includes(query) ||
       product.name_en.toLowerCase().includes(query) ||
       product.name_ar.includes(searchQuery) ||
       (product.sku && product.sku.toLowerCase().includes(query));
-    
-    const matchesCategory = categoryFilter === 'all' || product.category_id === categoryFilter;
-    
+
+    const matchesCategory = categoryFilter === "all" || product.category_id === categoryFilter;
+
     return matchesSearch && matchesCategory;
   });
 
@@ -486,19 +509,20 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
   const openAddModal = () => {
     setFormData({
-      name_en: '',
-      name_ar: '',
-      barcode: '',
-      sku: '',
+      name_en: "",
+      name_ar: "",
+      barcode: "",
+      sku: "",
       cost_price: 0,
       sale_price: 0,
+      tax_rate: 0,
       compare_at_price: 0,
       category_id: null,
       supplier_id: null,
       is_controlled: false,
       min_stock_quantity: 0,
-      description_en: '',
-      description_ar: '',
+      description_en: "",
+      description_ar: "",
       is_active: true,
     });
     setFormErrors({});
@@ -511,16 +535,17 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       name_en: product.name_en,
       name_ar: product.name_ar,
       barcode: product.barcode,
-      sku: product.sku || '',
+      sku: product.sku || "",
       cost_price: product.cost_price,
       sale_price: product.sale_price,
+      tax_rate: product.tax_rate || 0,
       compare_at_price: product.compare_at_price || 0,
       category_id: product.category_id || null,
       supplier_id: product.supplier_id || null,
       is_controlled: product.is_controlled,
       min_stock_quantity: product.min_stock_quantity || 0,
-      description_en: product.description_en || '',
-      description_ar: product.description_ar || '',
+      description_en: product.description_en || "",
+      description_ar: product.description_ar || "",
       is_active: product.is_active,
     });
     setFormErrors({});
@@ -541,16 +566,16 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
         batch_number: batch.batch_number,
         cost_price: batch.cost_price,
         current_quantity: batch.current_quantity,
-        expiry_date: batch.expiry_date.split('T')[0],
+        expiry_date: batch.expiry_date.split("T")[0],
       });
     } else {
       setSelectedBatch(null);
       setIsBatchEditMode(false);
       setBatchFormData({
-        batch_number: '',
+        batch_number: "",
         cost_price: 0,
         current_quantity: 0,
-        expiry_date: '',
+        expiry_date: "",
       });
     }
     setIsBatchModalOpen(true);
@@ -576,11 +601,13 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     setIsSubmitting(true);
     try {
       const url = selectedProduct ? `${apiUrl}/${selectedProduct.id}` : apiUrl;
-      const method = selectedProduct ? 'PUT' : 'POST';
+      const method = selectedProduct ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method,
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           name: formData.name_en.trim(),
           name_ar: formData.name_ar.trim(),
@@ -590,6 +617,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           supplier_id: formData.supplier_id,
           cost_price: formData.cost_price,
           selling_price: formData.sale_price,
+          tax_rate: formData.tax_rate / 100,
           min_stock_level: formData.min_stock_quantity,
           is_controlled: formData.is_controlled,
           is_active: formData.is_active,
@@ -619,9 +647,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${apiUrl}/${selectedProduct.id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
+      const response = await authenticatedFetch(`${apiUrl}/${selectedProduct.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
@@ -646,11 +676,13 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       const url = isBatchEditMode
         ? `${apiUrl}/${selectedProduct.id}/batches/${selectedBatch!.id}`
         : `${apiUrl}/${selectedProduct.id}/batches`;
-      const method = isBatchEditMode ? 'PUT' : 'POST';
+      const method = isBatchEditMode ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method,
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(
           isBatchEditMode
             ? {
@@ -704,37 +736,52 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
   };
 
   const getExpiryStatus = (batch: ProductBatch) => {
-    if (batch.is_expired) return { label: t.expiredBadge, color: 'red' };
-    if (batch.days_until_expiry <= 30) return { label: t.expiringSoonBadge, color: 'yellow' };
-    return { label: t.stockOkBadge, color: 'green' };
+    if (batch.is_expired) return { label: t.expiredBadge, color: "red" };
+    if (batch.days_until_expiry <= 30) return { label: t.expiringSoonBadge, color: "yellow" };
+    return { label: t.stockOkBadge, color: "green" };
   };
 
   const inputClasses = `w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none ${
-    theme === 'dark'
-      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
-      : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
+    theme === "dark"
+      ? "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
+      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
   }`;
 
-  const labelClasses = 'mb-2 block text-sm font-medium text-[var(--foreground)]';
+  const labelClasses = "mb-2 block text-sm font-medium text-[var(--foreground)]";
 
   const buttonPrimaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold text-white transition-all ${
     isSubmitting
-      ? 'cursor-not-allowed bg-[color:var(--action)]/45'
-      : 'bg-[var(--action)] shadow-[0_14px_28px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)]'
+      ? "cursor-not-allowed bg-[color:var(--action)]/45"
+      : "bg-[var(--action)] shadow-[0_14px_28px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)]"
   }`;
 
   const buttonSecondaryClasses = `rounded-[var(--radius-md)] border px-4 py-3 font-semibold transition-all ${
-    theme === 'dark'
-      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-strong)]'
-      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]'
+    theme === "dark"
+      ? "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-strong)]"
+      : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]"
   }`;
 
-  const buttonDangerClasses = 'rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 font-semibold text-white transition-all hover:opacity-90';
+  const buttonDangerClasses =
+    "rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 font-semibold text-white transition-all hover:opacity-90";
 
-  const buttonSmallPrimaryClasses = 'rounded-[var(--radius-md)] bg-[var(--action)] px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-[var(--action-strong)]';
+  const buttonSmallPrimaryClasses =
+    "rounded-[var(--radius-md)] bg-[var(--action)] px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-[var(--action-strong)]";
+  const previousLabel = locale === "ar" ? "السابق" : "Previous";
+  const nextLabel = locale === "ar" ? "التالي" : "Next";
+  const taxRateLabel = t.taxRateLabel ?? (locale === "ar" ? "نسبة الضريبة (%)" : "Tax Rate (%)");
+  const customerPriceLabel =
+    t.customerPriceLabel ??
+    (locale === "ar" ? "السعر على العميل بعد الضريبة" : "Customer Pays (incl. tax)");
+  const taxHint =
+    t.taxHint ??
+    (locale === "ar"
+      ? "سعر البيع هنا قبل الضريبة، ويظهر إجمالي العميل بعد تطبيق نسبة الضريبة."
+      : "Sale price is before tax. Customer total includes this tax rate.");
+  const getCustomerPrice = (salePrice: number, taxRatePercent: number) =>
+    salePrice * (1 + taxRatePercent / 100);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
+    <div dir={isRTL ? "rtl" : "ltr"}>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">
           {t.title}
@@ -753,57 +800,62 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       {/* Search and Filters */}
       <div className="mb-6 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_76%,transparent)] p-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="relative text-[var(--foreground)]">
-          <input
-            ref={barcodeInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder={t.searchPlaceholder}
-            className={`${inputClasses} pl-10`}
-          />
-          <svg
-            className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted)] ${
-              isRTL ? 'right-3' : 'left-3'
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          <div className="relative text-[var(--foreground)]">
+            <input
+              ref={barcodeInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder={t.searchPlaceholder}
+              className={`${inputClasses} pl-10`}
             />
-          </svg>
-        </div>
-        <div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value === 'all' ? 'all' : e.target.value);
-              setCurrentPage(1);
-            }}
-            className={inputClasses}
-          >
-            <option value="all">{t.allCategories}</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {locale === 'ar' ? cat.name_ar : cat.name_en}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center text-sm text-[var(--muted)]">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          {t.barcodeScanHint}
-        </div>
+            <svg
+              className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted)] ${
+                isRTL ? "right-3" : "left-3"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <div>
+            <select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value === "all" ? "all" : e.target.value);
+                setCurrentPage(1);
+              }}
+              className={inputClasses}
+            >
+              <option value="all">{t.allCategories}</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {locale === "ar" ? cat.name_ar : cat.name_en}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center text-sm text-[var(--muted)]">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            {t.barcodeScanHint}
+          </div>
         </div>
       </div>
 
@@ -818,8 +870,19 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       {isLoading ? (
         <div className="py-12 text-center text-[var(--muted)]">
           <svg className="animate-spin h-8 w-8 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
           Loading...
         </div>
@@ -834,10 +897,10 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               <div
                 key={product.id}
                 className={`rounded-[var(--radius-xl)] border transition-all ${
-                  theme === 'dark'
-                    ? 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_30%,var(--border)_70%)]'
-                    : 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_34%,var(--border)_66%)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]'
-                } ${!product.is_active ? 'opacity-60' : ''}`}
+                  theme === "dark"
+                    ? "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_30%,var(--border)_70%)]"
+                    : "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_34%,var(--border)_66%)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+                } ${!product.is_active ? "opacity-60" : ""}`}
               >
                 {/* Product Card Header */}
                 <div className="p-4">
@@ -845,7 +908,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="truncate text-lg font-semibold text-[var(--foreground)]">
-                          {locale === 'ar' ? product.name_ar : product.name_en}
+                          {locale === "ar" ? product.name_ar : product.name_en}
                         </h3>
                         {product.is_controlled && (
                           <span className="rounded-full bg-[var(--info-soft)] px-2 py-0.5 text-xs text-[var(--info)]">
@@ -858,20 +921,25 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                           Barcode: {product.barcode}
                         </span>
                         {product.sku && (
-                          <span className="text-[var(--muted)]">
-                            SKU: {product.sku}
-                          </span>
+                          <span className="text-[var(--muted)]">SKU: {product.sku}</span>
                         )}
                         <span className="text-[var(--foreground)]">
                           Stock: {product.total_quantity}
                         </span>
                         {product.category && (
                           <span className="text-[var(--muted)]">
-                            {locale === 'ar' ? product.category.name_ar : product.category.name_en}
+                            {locale === "ar" ? product.category.name_ar : product.category.name_en}
                           </span>
                         )}
                         <span className="font-semibold text-[var(--action)]">
-                          ${product.sale_price.toFixed(2)}
+                          EGP {product.sale_price.toFixed(2)}
+                        </span>
+                        <span className="text-[var(--muted)]">
+                          Tax {product.tax_rate.toFixed(0)}%
+                        </span>
+                        <span className="font-semibold text-[var(--accent)]">
+                          {customerPriceLabel}: EGP{" "}
+                          {getCustomerPrice(product.sale_price, product.tax_rate).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -887,8 +955,18 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                         className="rounded-[var(--radius-md)] p-2 text-[var(--muted)] transition-all hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                         aria-label={t.editButton}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
                         </svg>
                       </button>
                       <button
@@ -896,8 +974,18 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                         className="rounded-[var(--radius-md)] p-2 text-[var(--danger)] transition-all hover:bg-[var(--danger-soft)]"
                         aria-label={t.deleteButton}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -908,15 +996,23 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                 {expandedProduct === product.id && (
                   <div className="border-t border-[var(--border)] px-4 pb-4">
                     <div className="flex items-center justify-between mt-4 mb-3">
-                      <h4 className="font-semibold text-[var(--foreground)]">
-                        {t.batchesSection}
-                      </h4>
+                      <h4 className="font-semibold text-[var(--foreground)]">{t.batchesSection}</h4>
                       <button
                         onClick={() => openBatchModal(product)}
                         className={buttonSmallPrimaryClasses}
                       >
-                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        <svg
+                          className="w-4 h-4 inline mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
                         </svg>
                         {t.addBatchButton}
                       </button>
@@ -926,73 +1022,78 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                         <table className="w-full text-sm">
                           <thead className="bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)]">
                             <tr>
-                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchNumber}</th>
-                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchCost}</th>
-                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchQuantity}</th>
-                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchExpiry}</th>
-                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">Status</th>
-                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.fefoOrder}</th>
-                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchActions}</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                                {t.batchNumber}
+                              </th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                                {t.batchCost}
+                              </th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                                {t.batchQuantity}
+                              </th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                                {t.batchExpiry}
+                              </th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                                Status
+                              </th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                                {t.fefoOrder}
+                              </th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">
+                                {t.batchActions}
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {product.batches.map((batch, idx) => {
                               const status = getExpiryStatus(batch);
                               return (
-                                <tr
-                                  key={batch.id}
-                                  className={`border-t ${
-                                    theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-                                  }`}
-                                >
-                                  <td className={`px-4 py-3 ${
-                                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                                  }`}>
+                                <tr key={batch.id} className="border-t border-[var(--border)]">
+                                  <td className="px-4 py-3 text-[var(--foreground)]">
                                     {batch.batch_number}
                                   </td>
-                                  <td className={`px-4 py-3 ${
-                                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                                  }`}>
-                                    ${batch.cost_price.toFixed(2)}
+                                  <td className="px-4 py-3 text-[var(--foreground)]">
+                                    EGP {batch.cost_price.toFixed(2)}
                                   </td>
-                                  <td className={`px-4 py-3 ${
-                                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                                  }`}>
+                                  <td className="px-4 py-3 text-[var(--foreground)]">
                                     {batch.current_quantity} / {batch.initial_quantity}
                                   </td>
-                                  <td className={`px-4 py-3 ${
-                                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                                  }`}>
+                                  <td className="px-4 py-3 text-[var(--foreground)]">
                                     {new Date(batch.expiry_date).toLocaleDateString()}
                                   </td>
                                   <td className="px-4 py-3">
-                                    <span className={`px-2 py-1 text-xs rounded-full ${
-                                      status.color === 'red'
-                                        ? theme === 'dark' ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
-                                        : status.color === 'yellow'
-                                        ? theme === 'dark' ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
-                                        : theme === 'dark' ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
-                                    }`}>
+                                    <span
+                                      className={`rounded-full px-2 py-1 text-xs ${
+                                        status.color === "red"
+                                          ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                                          : status.color === "yellow"
+                                            ? "bg-[var(--warning-soft)] text-[var(--warning)]"
+                                            : "bg-[var(--action-soft)] text-[var(--action)]"
+                                      }`}
+                                    >
                                       {status.label}
                                     </span>
                                   </td>
-                                  <td className={`px-4 py-3 ${
-                                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                                  }`}>
-                                    #{idx + 1}
-                                  </td>
+                                  <td className="px-4 py-3 text-[var(--muted)]">#{idx + 1}</td>
                                   <td className="px-4 py-3">
                                     <button
                                       onClick={() => openBatchModal(product, batch)}
-                                      className={`p-1.5 rounded transition-all ${
-                                        theme === 'dark'
-                                          ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-300'
-                                          : 'hover:bg-gray-100 text-gray-600 hover:text-gray-700'
-                                      }`}
+                                      className="rounded p-1.5 text-[var(--muted)] transition-all hover:bg-[var(--surface-strong)] hover:text-[var(--foreground)]"
                                       aria-label={t.editButton}
                                     >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                        />
                                       </svg>
                                     </button>
                                   </td>
@@ -1003,11 +1104,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                         </table>
                       </div>
                     ) : (
-                      <p className={`text-center py-8 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                      }`}>
-                        {t.noBatches}
-                      </p>
+                      <p className="py-8 text-center text-[var(--muted)]">{t.noBatches}</p>
                     )}
                   </div>
                 )}
@@ -1017,50 +1114,51 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between">
-              <p className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
+            <div className="mt-6 flex flex-col gap-4 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_78%,transparent)] p-4 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm text-[var(--muted)]">
                 {t.pagination
-                  .replace('{{from}}', String((currentPage - 1) * itemsPerPage + 1))
-                  .replace('{{to}}', String(Math.min(currentPage * itemsPerPage, filteredProducts.length)))
-                  .replace('{{total}}', String(filteredProducts.length))}
+                  .replace("{{from}}", String((currentPage - 1) * itemsPerPage + 1))
+                  .replace(
+                    "{{to}}",
+                    String(Math.min(currentPage * itemsPerPage, filteredProducts.length))
+                  )
+                  .replace("{{total}}", String(filteredProducts.length))}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${
+                  className={`rounded-[var(--radius-md)] border px-4 py-2 text-sm font-semibold transition-all ${
                     currentPage === 1
-                      ? theme === 'dark' ? 'bg-gray-800 text-gray-600' : 'bg-gray-100 text-gray-400'
-                      : buttonSecondaryClasses
+                      ? "cursor-not-allowed border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] opacity-60"
+                      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]"
                   }`}
                 >
-                  Previous
+                  {previousLabel}
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1.5 rounded-lg transition-all ${
+                    className={`min-w-11 rounded-[var(--radius-md)] border px-3 py-2 text-sm font-semibold transition-all ${
                       currentPage === page
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                        : buttonSecondaryClasses
+                        ? "border-[color:color-mix(in_srgb,var(--action)_32%,transparent)] bg-[var(--action)] text-white shadow-[0_12px_24px_rgba(31,157,115,0.18)]"
+                        : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]"
                     }`}
                   >
                     {page}
                   </button>
                 ))}
                 <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${
+                  className={`rounded-[var(--radius-md)] border px-4 py-2 text-sm font-semibold transition-all ${
                     currentPage === totalPages
-                      ? theme === 'dark' ? 'bg-gray-800 text-gray-600' : 'bg-gray-100 text-gray-400'
-                      : buttonSecondaryClasses
+                      ? "cursor-not-allowed border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] opacity-60"
+                      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]"
                   }`}
                 >
-                  Next
+                  {nextLabel}
                 </button>
               </div>
             </div>
@@ -1093,11 +1191,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleSubmit}
-              className={buttonPrimaryClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleSubmit} className={buttonPrimaryClasses} disabled={isSubmitting}>
               {isSubmitting ? t.savingButton : t.saveButton}
             </button>
           </>
@@ -1110,9 +1204,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               type="text"
               value={formData.name_en}
               onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-              className={`${inputClasses} ${formErrors.name_en ? 'border-red-500' : ''}`}
+              className={`${inputClasses} ${formErrors.name_en ? "border-red-500" : ""}`}
             />
-            {formErrors.name_en && <p className="mt-1 text-sm text-red-500">{formErrors.name_en}</p>}
+            {formErrors.name_en && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_en}</p>
+            )}
           </div>
           <div>
             <label className={labelClasses}>{t.nameArLabel}</label>
@@ -1120,10 +1216,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               type="text"
               value={formData.name_ar}
               onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-              className={`${inputClasses} ${formErrors.name_ar ? 'border-red-500' : ''}`}
+              className={`${inputClasses} ${formErrors.name_ar ? "border-red-500" : ""}`}
               dir="rtl"
             />
-            {formErrors.name_ar && <p className="mt-1 text-sm text-red-500">{formErrors.name_ar}</p>}
+            {formErrors.name_ar && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_ar}</p>
+            )}
           </div>
           <div>
             <label className={labelClasses}>{t.barcodeLabel}</label>
@@ -1132,10 +1230,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               type="text"
               value={formData.barcode}
               onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              className={`${inputClasses} ${formErrors.barcode ? 'border-red-500' : ''}`}
+              className={`${inputClasses} ${formErrors.barcode ? "border-red-500" : ""}`}
               placeholder="Scan or enter barcode"
             />
-            {formErrors.barcode && <p className="mt-1 text-sm text-red-500">{formErrors.barcode}</p>}
+            {formErrors.barcode && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.barcode}</p>
+            )}
           </div>
           <div>
             <label className={labelClasses}>{t.skuLabel}</label>
@@ -1152,10 +1252,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               type="number"
               step="0.01"
               value={formData.cost_price}
-              onChange={(e) => setFormData({ ...formData, cost_price: parseFloat(e.target.value) || 0 })}
-              className={`${inputClasses} ${formErrors.cost_price ? 'border-red-500' : ''}`}
+              onChange={(e) =>
+                setFormData({ ...formData, cost_price: parseFloat(e.target.value) || 0 })
+              }
+              className={`${inputClasses} ${formErrors.cost_price ? "border-red-500" : ""}`}
             />
-            {formErrors.cost_price && <p className="mt-1 text-sm text-red-500">{formErrors.cost_price}</p>}
+            {formErrors.cost_price && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.cost_price}</p>
+            )}
           </div>
           <div>
             <label className={labelClasses}>{t.salePriceLabel}</label>
@@ -1163,10 +1267,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               type="number"
               step="0.01"
               value={formData.sale_price}
-              onChange={(e) => setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })}
-              className={`${inputClasses} ${formErrors.sale_price ? 'border-red-500' : ''}`}
+              onChange={(e) =>
+                setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })
+              }
+              className={`${inputClasses} ${formErrors.sale_price ? "border-red-500" : ""}`}
             />
-            {formErrors.sale_price && <p className="mt-1 text-sm text-red-500">{formErrors.sale_price}</p>}
+            {formErrors.sale_price && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.sale_price}</p>
+            )}
           </div>
           <div>
             <label className={labelClasses}>{t.compareAtPriceLabel}</label>
@@ -1174,10 +1282,41 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               type="number"
               step="0.01"
               value={formData.compare_at_price}
-              onChange={(e) => setFormData({ ...formData, compare_at_price: parseFloat(e.target.value) || 0 })}
-              className={`${inputClasses} ${formErrors.compare_at_price ? 'border-red-500' : ''}`}
+              onChange={(e) =>
+                setFormData({ ...formData, compare_at_price: parseFloat(e.target.value) || 0 })
+              }
+              className={`${inputClasses} ${formErrors.compare_at_price ? "border-red-500" : ""}`}
             />
-            {formErrors.compare_at_price && <p className="mt-1 text-sm text-red-500">{formErrors.compare_at_price}</p>}
+            {formErrors.compare_at_price && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.compare_at_price}</p>
+            )}
+          </div>
+          <div>
+            <label className={labelClasses}>{taxRateLabel}</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.tax_rate}
+              onChange={(e) =>
+                setFormData({ ...formData, tax_rate: parseFloat(e.target.value) || 0 })
+              }
+              className={inputClasses}
+            />
+          </div>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_70%,transparent)] p-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--muted)]">
+              {customerPriceLabel}
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
+              EGP {getCustomerPrice(formData.sale_price, formData.tax_rate).toFixed(2)}
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">{taxHint}</p>
+          </div>
+          <div className="md:col-span-2 -mt-2 text-xs text-[var(--muted)]">
+            {locale === "ar"
+              ? "تُحفَظ أسعار المنتجات في النظام بالجنيه المصري الأساسي، ثم تُطبَّق تحويلات العملات وقت الدفع فقط."
+              : "Product prices are stored in the base currency, EGP. Foreign currency conversion only happens during checkout."}
           </div>
           <div>
             <label className={labelClasses}>{t.isControlledLabel}</label>
@@ -1197,14 +1336,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           <div>
             <label className={labelClasses}>{t.categoryLabel}</label>
             <select
-              value={formData.category_id || ''}
+              value={formData.category_id || ""}
               onChange={(e) => setFormData({ ...formData, category_id: e.target.value || null })}
               className={inputClasses}
             >
               <option value="">No Category</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
-                  {locale === 'ar' ? cat.name_ar : cat.name_en}
+                  {locale === "ar" ? cat.name_ar : cat.name_en}
                 </option>
               ))}
             </select>
@@ -1212,14 +1351,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           <div>
             <label className={labelClasses}>{t.supplierLabel}</label>
             <select
-              value={formData.supplier_id || ''}
+              value={formData.supplier_id || ""}
               onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value || null })}
               className={inputClasses}
             >
               <option value="">No Supplier</option>
               {suppliers.map((sup) => (
                 <option key={sup.id} value={sup.id}>
-                  {locale === 'ar' ? sup.name_ar : sup.name_en}
+                  {locale === "ar" ? sup.name_ar : sup.name_en}
                 </option>
               ))}
             </select>
@@ -1229,7 +1368,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             <input
               type="number"
               value={formData.min_stock_quantity}
-              onChange={(e) => setFormData({ ...formData, min_stock_quantity: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setFormData({ ...formData, min_stock_quantity: parseInt(e.target.value) || 0 })
+              }
               className={inputClasses}
             />
           </div>
@@ -1275,7 +1416,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           setSelectedProduct(null);
           setSelectedBatch(null);
         }}
-        title={isBatchEditMode ? 'Edit Batch' : 'Add New Batch'}
+        title={isBatchEditMode ? "Edit Batch" : "Add New Batch"}
         locale={locale}
         theme={theme}
         footer={
@@ -1318,7 +1459,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
               type="number"
               step="0.01"
               value={batchFormData.cost_price}
-              onChange={(e) => setBatchFormData({ ...batchFormData, cost_price: parseFloat(e.target.value) || 0 })}
+              onChange={(e) =>
+                setBatchFormData({ ...batchFormData, cost_price: parseFloat(e.target.value) || 0 })
+              }
               className={inputClasses}
             />
           </div>
@@ -1327,7 +1470,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             <input
               type="number"
               value={batchFormData.current_quantity}
-              onChange={(e) => setBatchFormData({ ...batchFormData, current_quantity: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setBatchFormData({
+                  ...batchFormData,
+                  current_quantity: parseInt(e.target.value) || 0,
+                })
+              }
               className={inputClasses}
             />
           </div>
@@ -1365,24 +1513,16 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleDelete}
-              className={buttonDangerClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleDelete} className={buttonDangerClasses} disabled={isSubmitting}>
               {isSubmitting ? t.deleteLoading : t.deleteButton}
             </button>
           </>
         }
       >
-        <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-          {t.deleteConfirm}
-        </p>
+        <p className="text-[var(--foreground)]">{t.deleteConfirm}</p>
         {selectedProduct && (
-          <p className={`mt-4 font-medium ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            {locale === 'ar' ? selectedProduct.name_ar : selectedProduct.name_en}
+          <p className="mt-4 font-medium text-[var(--foreground)]">
+            {locale === "ar" ? selectedProduct.name_ar : selectedProduct.name_en}
           </p>
         )}
       </Modal>

@@ -68,6 +68,8 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
           saleTotalAmount: sales.totalAmount,
           cashierId: sales.cashierId,
           saleCreatedAt: sales.createdAt,
+          salePaymentMethod: sales.paymentMethod,
+          saleCurrency: sales.currency,
           // sale_item fields
           itemProductId: saleItems.productId,
           itemProductName: saleItems.productName,
@@ -100,13 +102,24 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
       );
 
       // ── Aggregate: unique sales (deduplicate by saleId) ──
-      const salesById = new Map<string, { totalAmount: number; cashierId: string; createdAt: Date | null }>();
+      const salesById = new Map<
+        string,
+        {
+          totalAmount: number;
+          cashierId: string;
+          createdAt: Date | null;
+          paymentMethod: string;
+          currency: string;
+        }
+      >();
       for (const row of rows) {
         if (!salesById.has(row.saleId)) {
           salesById.set(row.saleId, {
             totalAmount: row.saleTotalAmount,
             cashierId: row.cashierId,
             createdAt: row.saleCreatedAt,
+            paymentMethod: row.salePaymentMethod,
+            currency: row.saleCurrency,
           });
         }
       }
@@ -147,6 +160,19 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
           quantity: p.quantity,
         }));
 
+      const paymentMethodRevenue = new Map<
+        string,
+        { paymentMethod: string; revenue: number; transactions: number }
+      >();
+      const currencyRevenue = new Map<
+        string,
+        { currency: string; revenue: number; transactions: number }
+      >();
+      const hourlyRevenue = new Map<
+        string,
+        { hour: string; revenue: number; transactions: number }
+      >();
+
       // Cashier breakdown
       const cashierRevenue = new Map<
         string,
@@ -164,6 +190,47 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
             revenue: s.totalAmount,
             transactions: 1,
           });
+        }
+
+        const paymentKey = s.paymentMethod || 'unknown';
+        const paymentEntry = paymentMethodRevenue.get(paymentKey);
+        if (paymentEntry) {
+          paymentEntry.revenue += s.totalAmount;
+          paymentEntry.transactions += 1;
+        } else {
+          paymentMethodRevenue.set(paymentKey, {
+            paymentMethod: paymentKey,
+            revenue: s.totalAmount,
+            transactions: 1,
+          });
+        }
+
+        const currencyKey = s.currency || 'EGP';
+        const currencyEntry = currencyRevenue.get(currencyKey);
+        if (currencyEntry) {
+          currencyEntry.revenue += s.totalAmount;
+          currencyEntry.transactions += 1;
+        } else {
+          currencyRevenue.set(currencyKey, {
+            currency: currencyKey,
+            revenue: s.totalAmount,
+            transactions: 1,
+          });
+        }
+
+        if (s.createdAt) {
+          const hourLabel = `${String(s.createdAt.getHours()).padStart(2, '0')}:00`;
+          const hourlyEntry = hourlyRevenue.get(hourLabel);
+          if (hourlyEntry) {
+            hourlyEntry.revenue += s.totalAmount;
+            hourlyEntry.transactions += 1;
+          } else {
+            hourlyRevenue.set(hourLabel, {
+              hour: hourLabel,
+              revenue: s.totalAmount,
+              transactions: 1,
+            });
+          }
         }
       }
       const cashierBreakdown = [...cashierRevenue.values()]
@@ -196,15 +263,59 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance
           count,
         }));
 
+      const bestSalesDay = chart.length > 0
+        ? chart.reduce((best, current) => (current.total > best.total ? current : best))
+        : null;
+
+      const hourlyBreakdown = [...hourlyRevenue.values()]
+        .sort((a, b) => a.hour.localeCompare(b.hour))
+        .map((entry) => ({
+          hour: entry.hour,
+          revenue: Math.round(entry.revenue * 100) / 100,
+          transactions: entry.transactions,
+        }));
+
+      const bestSalesHour = hourlyBreakdown.length > 0
+        ? hourlyBreakdown.reduce((best, current) => (current.revenue > best.revenue ? current : best))
+        : null;
+
+      const topDays = [...chart]
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
+      const paymentMix = [...paymentMethodRevenue.values()]
+        .sort((a, b) => b.revenue - a.revenue)
+        .map((entry) => ({
+          paymentMethod: entry.paymentMethod,
+          revenue: Math.round(entry.revenue * 100) / 100,
+          transactions: entry.transactions,
+          share: totalSales > 0 ? Math.round((entry.revenue / totalSales) * 1000) / 10 : 0,
+        }));
+
+      const currencyMix = [...currencyRevenue.values()]
+        .sort((a, b) => b.revenue - a.revenue)
+        .map((entry) => ({
+          currency: entry.currency,
+          revenue: Math.round(entry.revenue * 100) / 100,
+          transactions: entry.transactions,
+          share: totalSales > 0 ? Math.round((entry.revenue / totalSales) * 1000) / 10 : 0,
+        }));
+
       return reply.code(200).send({
         summary: {
           totalSales: Math.round(totalSales * 100) / 100,
           totalTransactions,
           averageOrderValue: Math.round(averageOrderValue * 100) / 100,
+          bestSalesDay,
+          bestSalesHour,
           topProducts,
           cashierBreakdown,
+          paymentMix,
+          currencyMix,
         },
         chart,
+        topDays,
+        hourlyBreakdown,
         meta: {
           startDate: toDateStr(startDate),
           endDate: toDateStr(endDate),

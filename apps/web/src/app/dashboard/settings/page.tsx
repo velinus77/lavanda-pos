@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { SettingsManager } from '@/components/admin/SettingsManager';
-import { getCachedUser } from '@/lib/auth';
-import { useTheme } from '@/contexts/ThemeProvider';
-import { useLocale } from '@/contexts/LocaleProvider';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { SettingsManager } from "@/components/admin/SettingsManager";
+import { getCachedUser } from "@/lib/auth";
+import { useTheme } from "@/contexts/ThemeProvider";
+import { useLocale } from "@/contexts/LocaleProvider";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -15,34 +15,29 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuthorization = () => {
-      const user = getCachedUser();
-      
-      if (!user) {
-        router.replace('/login');
-        return;
-      }
+    const user = getCachedUser();
 
-      // Admin-only page
-      if (user.role !== 'admin') {
-        router.replace('/dashboard');
-        return;
-      }
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
 
-      setIsAuthorized(true);
-      setIsLoading(false);
-    };
+    if (user.role !== "admin") {
+      router.replace("/dashboard");
+      return;
+    }
 
-    checkAuthorization();
+    setIsAuthorized(true);
+    setIsLoading(false);
   }, [router]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
+          <p className="text-sm text-[var(--muted)]">
+            {locale === "ar" ? "جاري التحميل..." : "Loading..."}
           </p>
         </div>
       </div>
@@ -53,8 +48,46 @@ export default function SettingsPage() {
     return null;
   }
 
+  const t =
+    locale === "ar"
+      ? {
+          home: "الرئيسية",
+          overline: "تشغيل النظام",
+          title: "الإعدادات",
+          subtitle:
+            "اضبط تفضيلات الصيدلية واللغة والضرائب وقواعد المخزون من مساحة تشغيل أوضح وأكثر هدوءًا.",
+        }
+      : {
+          home: "Home",
+          overline: "System operations",
+          title: "Settings",
+          subtitle:
+            "Manage pharmacy preferences, localization, tax defaults, and inventory rules from one calmer control surface.",
+        };
+
   return (
-    <div>
+    <div className="lav-page">
+      <div className="lav-page-hero">
+        <nav className="mb-4 text-sm text-[var(--muted)]" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-2 rtl:flex-row-reverse">
+            <li>
+              <a href="/dashboard" className="transition-colors hover:text-[var(--foreground)]">
+                {t.home}
+              </a>
+            </li>
+            <li className="text-[var(--accent)]">/</li>
+            <li className="font-medium text-[var(--foreground)]">{t.title}</li>
+          </ol>
+        </nav>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
+          {t.overline}
+        </p>
+        <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">
+          {t.title}
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">{t.subtitle}</p>
+      </div>
+
       <SettingsManager locale={locale} theme={theme} />
     </div>
   );

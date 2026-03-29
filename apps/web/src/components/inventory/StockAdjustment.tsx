@@ -1,10 +1,10 @@
-﻿'use client';
+﻿"use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Modal from '../ui/Modal';
-import { authenticatedFetch } from '@/lib/auth';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import Modal from "../ui/Modal";
+import { authenticatedFetch } from "@/lib/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 interface Product {
   id: string;
@@ -34,7 +34,7 @@ interface NewBatchFormState {
 interface AdjustmentPreview {
   product_name: string;
   batch_number: string;
-  adjustment_type: 'add' | 'remove' | 'return' | 'dispose';
+  adjustment_type: "add" | "remove" | "return" | "dispose";
   quantity_change: number;
   previous_quantity: number;
   new_quantity: number;
@@ -110,160 +110,161 @@ interface Translations {
   };
 }
 
-const translations: Record<'ar' | 'en', Translations> = {
+const translations: Record<"ar" | "en", Translations> = {
   en: {
-    title: 'Stock Adjustment',
-    description: 'Adjust inventory levels for products with batch tracking',
-    productLabel: 'Product *',
-    batchLabel: 'Batch *',
-    selectProduct: 'Select a product',
-    selectBatch: 'Select a batch',
-    adjustmentTypeLabel: 'Adjustment Type *',
-    quantityLabel: 'Quantity *',
-    reasonLabel: 'Reason',
-    reasonPlaceholder: 'Auto-filled from the selected action, product, and batch',
-    previewButton: 'Preview Adjustment',
-    submitButton: 'Submit Adjustment',
-    cancelButton: 'Cancel',
-    submitLoading: 'Processing...',
-    previewTitle: 'Confirm Adjustment',
-    confirmButton: 'Confirm & Submit',
-    closePreviewButton: 'Back to Edit',
-    noBatches: 'No batches available for this product',
-    createBatchOption: 'Create a new batch',
-    batchModeCreate: 'Receiving a new batch',
-    batchModeExisting: 'Adjusting an existing batch',
-    batchModeHint: 'Use a new batch when stock is arriving with a fresh batch number or expiry date.',
-    batchNumberLabel: 'Batch Number *',
-    batchNumberPlaceholder: 'Enter batch number',
-    expiryDateLabel: 'Expiry Date *',
-    costPriceLabel: 'Cost Price *',
-    costPricePlaceholder: 'Enter cost price',
-    currentStockLabel: 'Current stock',
-    fefoSuggestion: 'FEFO: choose the batch with the earliest expiry date',
-    expiredWarning: 'This batch is expired',
-    lowStockWarning: 'Low stock warning',
+    title: "Stock Adjustment",
+    description: "Adjust inventory levels for products with batch tracking",
+    productLabel: "Product *",
+    batchLabel: "Batch *",
+    selectProduct: "Select a product",
+    selectBatch: "Select a batch",
+    adjustmentTypeLabel: "Adjustment Type *",
+    quantityLabel: "Quantity *",
+    reasonLabel: "Reason",
+    reasonPlaceholder: "Auto-filled from the selected action, product, and batch",
+    previewButton: "Preview Adjustment",
+    submitButton: "Submit Adjustment",
+    cancelButton: "Cancel",
+    submitLoading: "Processing...",
+    previewTitle: "Confirm Adjustment",
+    confirmButton: "Confirm & Submit",
+    closePreviewButton: "Back to Edit",
+    noBatches: "No batches available for this product",
+    createBatchOption: "Create a new batch",
+    batchModeCreate: "Receiving a new batch",
+    batchModeExisting: "Adjusting an existing batch",
+    batchModeHint:
+      "Use a new batch when stock is arriving with a fresh batch number or expiry date.",
+    batchNumberLabel: "Batch Number *",
+    batchNumberPlaceholder: "Enter batch number",
+    expiryDateLabel: "Expiry Date *",
+    costPriceLabel: "Cost Price *",
+    costPricePlaceholder: "Enter cost price",
+    currentStockLabel: "Current stock",
+    fefoSuggestion: "FEFO: choose the batch with the earliest expiry date",
+    expiredWarning: "This batch is expired",
+    lowStockWarning: "Low stock warning",
     adjustmentTypes: {
-      add: 'Add Stock',
-      remove: 'Remove Stock',
-      return: 'Return to Stock',
-      dispose: 'Dispose/Damage',
+      add: "Add Stock",
+      remove: "Remove Stock",
+      return: "Return to Stock",
+      dispose: "Dispose/Damage",
     },
     adjustmentTypeDescriptions: {
-      add: 'Add new stock from purchase or production',
-      remove: 'Remove stock due to loss or correction',
-      return: 'Return items from customer or damaged goods',
-      dispose: 'Dispose due to damage, expiry, or quality issues',
+      add: "Add new stock from purchase or production",
+      remove: "Remove stock due to loss or correction",
+      return: "Return items from customer or damaged goods",
+      dispose: "Dispose due to damage, expiry, or quality issues",
     },
     previewFields: {
-      product: 'Product',
-      batch: 'Batch Number',
-      type: 'Adjustment Type',
-      previousQty: 'Previous Quantity',
-      change: 'Change',
-      newQty: 'New Quantity',
-      reason: 'Reason',
-      valueImpact: 'Value Impact',
+      product: "Product",
+      batch: "Batch Number",
+      type: "Adjustment Type",
+      previousQty: "Previous Quantity",
+      change: "Change",
+      newQty: "New Quantity",
+      reason: "Reason",
+      valueImpact: "Value Impact",
     },
     errors: {
-      productRequired: 'Please select a product',
-      batchRequired: 'Please select a batch',
-      quantityRequired: 'Please enter a quantity',
-      quantityInvalid: 'Quantity must be a positive number',
-      reasonRequired: 'Please provide a reason',
-      submitFailed: 'Failed to create adjustment',
-      fetchFailed: 'Failed to load products',
+      productRequired: "Please select a product",
+      batchRequired: "Please select a batch",
+      quantityRequired: "Please enter a quantity",
+      quantityInvalid: "Quantity must be a positive number",
+      reasonRequired: "Please provide a reason",
+      submitFailed: "Failed to create adjustment",
+      fetchFailed: "Failed to load products",
     },
     success: {
-      adjustmentCreated: 'Stock adjustment created successfully',
+      adjustmentCreated: "Stock adjustment created successfully",
     },
   },
   ar: {
-    title: 'تعديل المخزون',
-    description: 'تعديل مستويات المخزون للمنتجات مع تتبع الدفعات',
-    productLabel: 'المنتج *',
-    batchLabel: 'الدفعة *',
-    selectProduct: 'اختر منتجاً',
-    selectBatch: 'اختر دفعة',
-    adjustmentTypeLabel: 'نوع التعديل *',
-    quantityLabel: 'الكمية *',
-    reasonLabel: 'السبب',
-    reasonPlaceholder: 'يملأ تلقائياً من العملية والمنتج والدفعة المحددة',
-    previewButton: 'معاينة التعديل',
-    submitButton: 'إرسال التعديل',
-    cancelButton: 'إلغاء',
-    submitLoading: 'جارٍ المعالجة...',
-    previewTitle: 'تأكيد التعديل',
-    confirmButton: 'تأكيد وإرسال',
-    closePreviewButton: 'العودة للتحرير',
-    noBatches: 'لا توجد دفعات متاحة لهذا المنتج',
-    createBatchOption: 'إنشاء دفعة جديدة',
-    batchModeCreate: 'استلام دفعة جديدة',
-    batchModeExisting: 'تعديل دفعة موجودة',
-    batchModeHint: 'استخدم دفعة جديدة عندما يصل المخزون برقم دفعة أو تاريخ انتهاء مختلف.',
-    batchNumberLabel: 'رقم الدفعة *',
-    batchNumberPlaceholder: 'أدخل رقم الدفعة',
-    expiryDateLabel: 'تاريخ الانتهاء *',
-    costPriceLabel: 'سعر التكلفة *',
-    costPricePlaceholder: 'أدخل سعر التكلفة',
-    currentStockLabel: 'المخزون الحالي',
-    fefoSuggestion: 'FEFO: يوصى باختيار الدفعة الأقرب انتهاءً',
-    expiredWarning: 'هذه الدفعة منتهية',
-    lowStockWarning: 'تحذير: مخزون منخفض',
+    title: "تعديل المخزون",
+    description: "عدّل المخزون للصنف مع متابعة الدفعات من نفس الشاشة.",
+    productLabel: "الصنف *",
+    batchLabel: "الدفعة *",
+    selectProduct: "اختار صنف",
+    selectBatch: "اختار دفعة",
+    adjustmentTypeLabel: "نوع التعديل *",
+    quantityLabel: "الكمية *",
+    reasonLabel: "السبب",
+    reasonPlaceholder: "بيتكتب تلقائي من نوع العملية والصنف والدفعة اللي اخترتهم",
+    previewButton: "عاين التعديل",
+    submitButton: "سجّل التعديل",
+    cancelButton: "إلغاء",
+    submitLoading: "بننفّذ...",
+    previewTitle: "تأكيد التعديل",
+    confirmButton: "أكد وسجّل",
+    closePreviewButton: "ارجع للتعديل",
+    noBatches: "مفيش دفعات متاحة للصنف ده",
+    createBatchOption: "اعمل دفعة جديدة",
+    batchModeCreate: "استلام دفعة جديدة",
+    batchModeExisting: "تعديل دفعة موجودة",
+    batchModeHint: "اختار دفعة جديدة لو الاستلام جاي برقم دفعة أو تاريخ صلاحية مختلف.",
+    batchNumberLabel: "رقم الدفعة *",
+    batchNumberPlaceholder: "أدخل رقم الدفعة",
+    expiryDateLabel: "تاريخ الانتهاء *",
+    costPriceLabel: "سعر الشراء *",
+    costPricePlaceholder: "اكتب سعر الشراء",
+    currentStockLabel: "المخزون الحالي",
+    fefoSuggestion: "FEFO: الأفضل تختار الدفعة الأقرب في الانتهاء",
+    expiredWarning: "الدفعة دي منتهية",
+    lowStockWarning: "تنبيه: المخزون قليل",
     adjustmentTypes: {
-      add: 'إضافة مخزون',
-      remove: 'إزالة مخزون',
-      return: 'إرجاع للمخزون',
-      dispose: 'تلف أو إعدام',
+      add: "تزود مخزون",
+      remove: "تسحب من المخزون",
+      return: "ترجّع للمخزون",
+      dispose: "تلف أو إعدام",
     },
     adjustmentTypeDescriptions: {
-      add: 'إضافة مخزون جديد من شراء أو استلام',
-      remove: 'إزالة مخزون بسبب فقدان أو تصحيح',
-      return: 'إرجاع عناصر إلى المخزون',
-      dispose: 'التخلص من المخزون بسبب التلف أو الانتهاء',
+      add: "إضافة مخزون جديد من شراء أو استلام",
+      remove: "سحب مخزون بسبب نقص أو تصحيح",
+      return: "إرجاع وحدات للمخزون",
+      dispose: "إعدام المخزون بسبب التلف أو انتهاء الصلاحية",
     },
     previewFields: {
-      product: 'المنتج',
-      batch: 'رقم الدفعة',
-      type: 'نوع التعديل',
-      previousQty: 'الكمية السابقة',
-      change: 'التغيير',
-      newQty: 'الكمية الجديدة',
-      reason: 'السبب',
-      valueImpact: 'تأثير القيمة',
+      product: "المنتج",
+      batch: "رقم الدفعة",
+      type: "نوع التعديل",
+      previousQty: "الكمية السابقة",
+      change: "التغيير",
+      newQty: "الكمية الجديدة",
+      reason: "السبب",
+      valueImpact: "تأثير القيمة",
     },
     errors: {
-      productRequired: 'الرجاء اختيار منتج',
-      batchRequired: 'الرجاء اختيار دفعة',
-      quantityRequired: 'الرجاء إدخال الكمية',
-      quantityInvalid: 'يجب أن تكون الكمية رقماً موجباً',
-      reasonRequired: 'الرجاء إدخال سبب',
-      submitFailed: 'فشل إنشاء التعديل',
-      fetchFailed: 'فشل تحميل المنتجات',
+      productRequired: "من فضلك اختار صنف",
+      batchRequired: "من فضلك اختار دفعة",
+      quantityRequired: "من فضلك اكتب الكمية",
+      quantityInvalid: "الكمية لازم تكون رقم موجب",
+      reasonRequired: "من فضلك اكتب السبب",
+      submitFailed: "ماقدرناش نسجل التعديل",
+      fetchFailed: "ماقدرناش نحمل الأصناف",
     },
     success: {
-      adjustmentCreated: 'تم إنشاء تعديل المخزون بنجاح',
+      adjustmentCreated: "اتسجل تعديل المخزون بنجاح",
     },
   },
 };
 
 export interface StockAdjustmentProps {
-  locale?: 'ar' | 'en';
-  theme?: 'light' | 'dark';
+  locale?: "ar" | "en";
+  theme?: "light" | "dark";
   productsApiUrl?: string;
   stockAdjustApiUrl?: string;
   onSuccess?: () => void;
 }
 
 export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
-  locale = 'en',
-  theme = 'light',
+  locale = "en",
+  theme = "light",
   productsApiUrl = `${API_BASE}/api/products`,
   stockAdjustApiUrl = `${API_BASE}/api/stock/adjust`,
   onSuccess,
 }) => {
   const t = translations[locale];
-  const isRTL = locale === 'ar';
+  const isRTL = locale === "ar";
 
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<ProductBatch[]>([]);
@@ -273,16 +274,18 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
-  const [adjustmentType, setAdjustmentType] = useState<'add' | 'remove' | 'return' | 'dispose'>('add');
+  const [adjustmentType, setAdjustmentType] = useState<"add" | "remove" | "return" | "dispose">(
+    "add"
+  );
   const [quantity, setQuantity] = useState<number>(1);
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
   const [createNewBatch, setCreateNewBatch] = useState(false);
   const [newBatchForm, setNewBatchForm] = useState<NewBatchFormState>({
-    batch_number: '',
-    expiry_date: '',
-    cost_price: '',
+    batch_number: "",
+    expiry_date: "",
+    cost_price: "",
   });
-  const autoReasonRef = useRef('');
+  const autoReasonRef = useRef("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [showPreview, setShowPreview] = useState(false);
@@ -292,9 +295,9 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   const mapProduct = useCallback(
     (product: any): Product => ({
       id: String(product.id),
-      name_en: product.name_en ?? product.name ?? '',
-      name_ar: product.name_ar ?? '',
-      barcode: product.barcode ?? '',
+      name_en: product.name_en ?? product.name ?? "",
+      name_ar: product.name_ar ?? "",
+      barcode: product.barcode ?? "",
       cost_price: Number(product.cost_price ?? product.costPrice ?? 0),
     }),
     []
@@ -302,19 +305,19 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 
   const mapBatch = useCallback((batch: any): ProductBatch => {
     const expiryDate =
-      typeof batch.expiry_date === 'number'
+      typeof batch.expiry_date === "number"
         ? new Date(batch.expiry_date * 1000).toISOString()
         : batch.expiryDate instanceof Date
           ? batch.expiryDate.toISOString()
-          : batch.expiryDate ?? batch.expiry_date ?? new Date().toISOString();
+          : (batch.expiryDate ?? batch.expiry_date ?? new Date().toISOString());
     const daysUntilExpiry = Math.ceil(
       (new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     );
 
     return {
       id: String(batch.id),
-      product_id: String(batch.product_id ?? batch.productId ?? ''),
-      batch_number: batch.batch_number ?? batch.batchNumber ?? '',
+      product_id: String(batch.product_id ?? batch.productId ?? ""),
+      batch_number: batch.batch_number ?? batch.batchNumber ?? "",
       cost_price: Number(batch.cost_price ?? batch.costPrice ?? 0),
       current_quantity: Number(batch.current_quantity ?? batch.currentQuantity ?? 0),
       expiry_date: expiryDate,
@@ -329,14 +332,14 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       setError(null);
       const response = await authenticatedFetch(productsApiUrl, {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
       if (!response.ok) {
         throw new Error(t.errors.fetchFailed);
       }
       const data = await response.json();
-      const productRows = Array.isArray(data) ? data : data.products ?? [];
+      const productRows = Array.isArray(data) ? data : (data.products ?? []);
       setProducts(productRows.map(mapProduct));
     } catch (err) {
       setError(err instanceof Error ? err.message : t.errors.fetchFailed);
@@ -345,32 +348,38 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     }
   }, [mapProduct, productsApiUrl, t.errors.fetchFailed]);
 
-  const fetchBatches = useCallback(async (productId: string) => {
-    try {
-      const response = await authenticatedFetch(`${productsApiUrl}/${productId}/batches`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const batchRows = Array.isArray(data) ? data : data.batches ?? [];
-        const sorted = batchRows.map(mapBatch).sort((a: ProductBatch, b: ProductBatch) => 
-          new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
-        );
-        setBatches(sorted);
-        // Auto-select the first batch (FEFO)
-        if (sorted.length > 0) {
-          setSelectedBatchId(sorted[0].id);
+  const fetchBatches = useCallback(
+    async (productId: string) => {
+      try {
+        const response = await authenticatedFetch(`${productsApiUrl}/${productId}/batches`, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const batchRows = Array.isArray(data) ? data : (data.batches ?? []);
+          const sorted = batchRows
+            .map(mapBatch)
+            .sort(
+              (a: ProductBatch, b: ProductBatch) =>
+                new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
+            );
+          setBatches(sorted);
+          // Auto-select the first batch (FEFO)
+          if (sorted.length > 0) {
+            setSelectedBatchId(sorted[0].id);
+          }
+        } else {
+          setBatches([]);
         }
-      } else {
+      } catch (err) {
+        console.error("Failed to fetch batches:", err);
         setBatches([]);
       }
-    } catch (err) {
-      console.error('Failed to fetch batches:', err);
-      setBatches([]);
-    }
-  }, [mapBatch, productsApiUrl]);
+    },
+    [mapBatch, productsApiUrl]
+  );
 
   useEffect(() => {
     fetchProducts();
@@ -386,7 +395,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   }, [selectedProductId, fetchBatches]);
 
   useEffect(() => {
-    if (adjustmentType !== 'add') {
+    if (adjustmentType !== "add") {
       setCreateNewBatch(false);
       return;
     }
@@ -398,7 +407,9 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       setSelectedBatchId(null);
       setNewBatchForm((current) => ({
         ...current,
-        cost_price: current.cost_price || (selectedProduct?.cost_price ? String(selectedProduct.cost_price) : ''),
+        cost_price:
+          current.cost_price ||
+          (selectedProduct?.cost_price ? String(selectedProduct.cost_price) : ""),
       }));
       return;
     }
@@ -411,10 +422,10 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   const buildAutoReason = useCallback(() => {
     const product = products.find((item) => item.id === selectedProductId);
     const batch = batches.find((item) => item.id === selectedBatchId);
-    const productName = product ? (locale === 'ar' ? product.name_ar : product.name_en) : null;
+    const productName = product ? (locale === "ar" ? product.name_ar : product.name_en) : null;
     const batchNumber = createNewBatch ? newBatchForm.batch_number.trim() : batch?.batch_number;
 
-    if (locale === 'ar') {
+    if (locale === "ar") {
       if (productName && batchNumber) {
         return `${t.adjustmentTypes[adjustmentType]} للمنتج ${productName} - دفعة ${batchNumber}`;
       }
@@ -458,10 +469,10 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     const normalizedReason = reason.trim() || buildAutoReason();
     if (!selectedProductId) errors.product = t.errors.productRequired;
     if (createNewBatch) {
-      if (!newBatchForm.batch_number.trim()) errors.batch_number = 'Please enter a batch number';
-      if (!newBatchForm.expiry_date) errors.expiry_date = 'Please select an expiry date';
+      if (!newBatchForm.batch_number.trim()) errors.batch_number = "Please enter a batch number";
+      if (!newBatchForm.expiry_date) errors.expiry_date = "Please select an expiry date";
       if (!newBatchForm.cost_price || Number(newBatchForm.cost_price) <= 0) {
-        errors.cost_price = 'Cost price must be greater than 0';
+        errors.cost_price = "Cost price must be greater than 0";
       }
     } else if (!selectedBatchId) {
       errors.batch = t.errors.batchRequired;
@@ -473,24 +484,24 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
   };
 
   const generatePreview = () => {
-    const product = products.find(p => p.id === selectedProductId);
-    const batch = batches.find(b => b.id === selectedBatchId);
+    const product = products.find((p) => p.id === selectedProductId);
+    const batch = batches.find((b) => b.id === selectedBatchId);
     const normalizedReason = reason.trim() || buildAutoReason();
     let quantityChange = quantity;
-    
+
     // For remove/dispose, quantity is subtracted
-    if (adjustmentType === 'remove' || adjustmentType === 'dispose') {
+    if (adjustmentType === "remove" || adjustmentType === "dispose") {
       quantityChange = -quantity;
     }
 
     if (createNewBatch) {
       if (!product) return null;
 
-      const batchNumber = newBatchForm.batch_number.trim() || 'New batch';
+      const batchNumber = newBatchForm.batch_number.trim() || "New batch";
       const costPrice = Number(newBatchForm.cost_price || product.cost_price || 0);
 
       return {
-        product_name: locale === 'ar' ? product.name_ar : product.name_en,
+        product_name: locale === "ar" ? product.name_ar : product.name_en,
         batch_number: batchNumber,
         adjustment_type: adjustmentType,
         quantity_change: quantity,
@@ -508,7 +519,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     const valueImpact = quantityChange * batch.cost_price;
 
     return {
-      product_name: locale === 'ar' ? product.name_ar : product.name_en,
+      product_name: locale === "ar" ? product.name_ar : product.name_en,
       batch_number: batch.batch_number,
       adjustment_type: adjustmentType,
       quantity_change: quantityChange,
@@ -521,7 +532,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
 
   const handlePreview = () => {
     if (!validateForm()) return;
-    
+
     const previewData = generatePreview();
     if (previewData) {
       setPreview(previewData);
@@ -539,9 +550,9 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       const normalizedReason = reason.trim() || buildAutoReason();
       const response = createNewBatch
         ? await authenticatedFetch(`${productsApiUrl}/${selectedProductId}/batches`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               batch_number: newBatchForm.batch_number.trim(),
@@ -551,14 +562,15 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
             }),
           })
         : await authenticatedFetch(stockAdjustApiUrl, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               product_id: selectedProductId,
               batch_id: selectedBatchId,
-              quantity: adjustmentType === 'remove' || adjustmentType === 'dispose' ? -quantity : quantity,
+              quantity:
+                adjustmentType === "remove" || adjustmentType === "dispose" ? -quantity : quantity,
               reason: normalizedReason,
             }),
           });
@@ -569,28 +581,28 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       }
 
       setSuccessMessage(t.success.adjustmentCreated);
-      
+
       // Reset form
       setSelectedProductId(null);
       setSelectedBatchId(null);
-      setAdjustmentType('add');
+      setAdjustmentType("add");
       setQuantity(1);
-      setReason('');
+      setReason("");
       setCreateNewBatch(false);
       setNewBatchForm({
-        batch_number: '',
-        expiry_date: '',
-        cost_price: '',
+        batch_number: "",
+        expiry_date: "",
+        cost_price: "",
       });
       setShowPreview(false);
       setPreview(null);
-      
+
       // Refresh batches
       fetchProducts();
-      
+
       // Call onSuccess callback if provided
       onSuccess?.();
-      
+
       // Clear success message after 5 seconds
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
@@ -600,139 +612,136 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
     }
   };
 
-  const getSelectedBatch = () => batches.find(b => b.id === selectedBatchId);
+  const getSelectedBatch = () => batches.find((b) => b.id === selectedBatchId);
 
   const inputClasses = `w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none ${
-    theme === 'dark'
-      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
-      : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
+    theme === "dark"
+      ? "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
+      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
   }`;
 
-  const labelClasses = `block text-sm font-medium mb-2 ${
-    theme === 'dark' ? 'text-gray-300' : 'text-[var(--foreground)]'
-  }`;
+  const labelClasses = "mb-2 block text-sm font-medium text-[var(--foreground)]";
 
   const buttonPrimaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold text-white transition-all ${
     isSubmitting
-      ? 'cursor-not-allowed bg-[color:var(--action)]/45'
-      : 'bg-[var(--action)] shadow-[0_16px_30px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)] hover:shadow-[0_18px_34px_rgba(31,157,115,0.28)]'
+      ? "cursor-not-allowed bg-[color:var(--action)]/45"
+      : "bg-[var(--action)] shadow-[0_16px_30px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)] hover:shadow-[0_18px_34px_rgba(31,157,115,0.28)]"
   }`;
 
-  const buttonSecondaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold transition-all ${
-    theme === 'dark'
-      ? 'border border-[var(--border)] bg-[var(--surface)] text-gray-300 hover:bg-[var(--surface-strong)]'
-      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]'
-  }`;
+  const buttonSecondaryClasses =
+    "rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 font-semibold text-[var(--foreground)] transition-all hover:bg-[var(--surface-strong)]";
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
+    <div dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="mb-6">
-        <h1 className={`text-2xl font-bold mb-2 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
-        }`}>
-          {t.title}
-        </h1>
-        <p className={`${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          {t.description}
-        </p>
+        <h1 className="mb-2 text-2xl font-bold text-[var(--foreground)]">{t.title}</h1>
+        <p className="text-[var(--muted)]">{t.description}</p>
       </div>
 
       {/* Success Message */}
       {successMessage && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          theme === 'dark'
-            ? 'bg-green-900/20 border-green-800 text-green-300'
-            : 'bg-green-50 border-green-200 text-green-700'
-        }`}>
+        <div className="mb-6 rounded-[var(--radius-lg)] border border-[color:color-mix(in_srgb,var(--action)_34%,transparent)] bg-[var(--action-soft)] p-4 text-[var(--action)]">
           {successMessage}
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          theme === 'dark'
-            ? 'bg-red-900/20 border-red-800 text-red-300'
-            : 'bg-red-50 border-red-200 text-red-700'
-        }`}>
+        <div className="mb-6 rounded-[var(--radius-lg)] border border-[color:color-mix(in_srgb,var(--danger)_34%,transparent)] bg-[var(--danger-soft)] p-4 text-[var(--danger)]">
           {error}
         </div>
       )}
 
       {/* Form */}
-      <div className={`rounded-[var(--radius-xl)] border p-6 ${
-        theme === 'dark'
-          ? 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)]'
-          : 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)]'
-      }`}>
+      <div
+        className={`rounded-[var(--radius-xl)] border p-6 ${
+          theme === "dark"
+            ? "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)]"
+            : "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)]"
+        }`}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Product Selection */}
           <div>
             <label className={labelClasses}>{t.productLabel}</label>
             <select
-              value={selectedProductId || ''}
+              value={selectedProductId || ""}
               onChange={(e) => {
                 setSelectedProductId(e.target.value || null);
                 setSelectedBatchId(null);
                 setCreateNewBatch(false);
-                setFormErrors({ ...formErrors, product: '' });
+                setFormErrors({ ...formErrors, product: "" });
               }}
-              className={`${inputClasses} ${formErrors.product ? 'border-red-500' : ''}`}
+              className={`${inputClasses} ${formErrors.product ? "border-red-500" : ""}`}
               disabled={isLoadingProducts}
             >
               <option value="">{t.selectProduct}</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
-                  {locale === 'ar' ? product.name_ar : product.name_en} ({product.barcode})
+                  {locale === "ar" ? product.name_ar : product.name_en} ({product.barcode})
                 </option>
               ))}
             </select>
-            {formErrors.product && <p className="mt-1 text-sm text-red-500">{formErrors.product}</p>}
+            {formErrors.product && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.product}</p>
+            )}
           </div>
 
           {/* Batch Selection */}
           <div>
             <label className={labelClasses}>{t.batchLabel}</label>
             <select
-              value={selectedBatchId || ''}
+              value={selectedBatchId || ""}
               onChange={(e) => {
                 setSelectedBatchId(e.target.value || null);
-                setCreateNewBatch(e.target.value === '__new__');
-                setFormErrors({ ...formErrors, batch: '' });
+                setCreateNewBatch(e.target.value === "__new__");
+                setFormErrors({ ...formErrors, batch: "" });
               }}
-              className={`${inputClasses} ${formErrors.batch ? 'border-red-500' : ''}`}
-              disabled={!selectedProductId || (batches.length === 0 && adjustmentType !== 'add')}
+              className={`${inputClasses} ${formErrors.batch ? "border-red-500" : ""}`}
+              disabled={!selectedProductId || (batches.length === 0 && adjustmentType !== "add")}
             >
               <option value="">{t.selectBatch}</option>
-              {adjustmentType === 'add' && selectedProductId && (
+              {adjustmentType === "add" && selectedProductId && (
                 <option value="__new__">{t.createBatchOption}</option>
               )}
               {batches.map((batch) => (
                 <option key={batch.id} value={batch.id}>
                   {batch.batch_number} - {batch.current_quantity} units
-                  {batch.is_expired ? ' (EXPIRED)' : batch.days_until_expiry <= 30 ? ` (${batch.days_until_expiry} days)` : ''}
+                  {batch.is_expired
+                    ? " (EXPIRED)"
+                    : batch.days_until_expiry <= 30
+                      ? ` (${batch.days_until_expiry} days)`
+                      : ""}
                 </option>
               ))}
             </select>
             {batches.length === 0 && selectedProductId && !createNewBatch && (
-              <p className={`mt-1 text-sm ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-              }`}>
-                {t.noBatches}
-              </p>
+              <p className="mt-1 text-sm text-[var(--muted)]">{t.noBatches}</p>
             )}
-            {formErrors.batch && <p className="mt-1 text-sm text-red-500">{formErrors.batch}</p>}
-            
+            {formErrors.batch && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.batch}</p>
+            )}
+
             {/* FEFO Suggestion */}
             {batches.length > 0 && selectedBatchId && (
-              <div className={`mt-2 text-xs ${
-                theme === 'dark' ? 'text-[var(--info)]' : 'text-[var(--info)]'
-              }`}>
-                <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div
+                className={`mt-2 text-xs ${
+                  theme === "dark" ? "text-[var(--info)]" : "text-[var(--info)]"
+                }`}
+              >
+                <svg
+                  className="w-4 h-4 inline mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 {t.fefoSuggestion}
               </div>
@@ -762,12 +771,14 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                   value={newBatchForm.batch_number}
                   onChange={(e) => {
                     setNewBatchForm({ ...newBatchForm, batch_number: e.target.value });
-                    setFormErrors({ ...formErrors, batch_number: '' });
+                    setFormErrors({ ...formErrors, batch_number: "" });
                   }}
-                  className={`${inputClasses} ${formErrors.batch_number ? 'border-red-500' : ''}`}
+                  className={`${inputClasses} ${formErrors.batch_number ? "border-red-500" : ""}`}
                   placeholder={t.batchNumberPlaceholder}
                 />
-                {formErrors.batch_number && <p className="mt-1 text-sm text-red-500">{formErrors.batch_number}</p>}
+                {formErrors.batch_number && (
+                  <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.batch_number}</p>
+                )}
               </div>
 
               <div>
@@ -777,11 +788,13 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                   value={newBatchForm.expiry_date}
                   onChange={(e) => {
                     setNewBatchForm({ ...newBatchForm, expiry_date: e.target.value });
-                    setFormErrors({ ...formErrors, expiry_date: '' });
+                    setFormErrors({ ...formErrors, expiry_date: "" });
                   }}
-                  className={`${inputClasses} ${formErrors.expiry_date ? 'border-red-500' : ''}`}
+                  className={`${inputClasses} ${formErrors.expiry_date ? "border-red-500" : ""}`}
                 />
-                {formErrors.expiry_date && <p className="mt-1 text-sm text-red-500">{formErrors.expiry_date}</p>}
+                {formErrors.expiry_date && (
+                  <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.expiry_date}</p>
+                )}
               </div>
 
               <div>
@@ -793,12 +806,14 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                   value={newBatchForm.cost_price}
                   onChange={(e) => {
                     setNewBatchForm({ ...newBatchForm, cost_price: e.target.value });
-                    setFormErrors({ ...formErrors, cost_price: '' });
+                    setFormErrors({ ...formErrors, cost_price: "" });
                   }}
-                  className={`${inputClasses} ${formErrors.cost_price ? 'border-red-500' : ''}`}
+                  className={`${inputClasses} ${formErrors.cost_price ? "border-red-500" : ""}`}
                   placeholder={t.costPricePlaceholder}
                 />
-                {formErrors.cost_price && <p className="mt-1 text-sm text-red-500">{formErrors.cost_price}</p>}
+                {formErrors.cost_price && (
+                  <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.cost_price}</p>
+                )}
               </div>
             </>
           )}
@@ -807,13 +822,13 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
           <div className="md:col-span-2">
             <label className={labelClasses}>{t.adjustmentTypeLabel}</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {(['add', 'remove', 'return', 'dispose'] as const).map((type) => (
+              {(["add", "remove", "return", "dispose"] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => {
                     setAdjustmentType(type);
-                    if (type !== 'add') {
+                    if (type !== "add") {
                       setCreateNewBatch(false);
                     } else if (selectedProductId && batches.length === 0) {
                       setCreateNewBatch(true);
@@ -821,22 +836,20 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
                   }}
                   className={`p-4 rounded-lg border-2 transition-all text-left ${
                     adjustmentType === type
-                      ? 'border-[var(--action)] bg-[color:color-mix(in_srgb,var(--action)_10%,transparent)]'
-                      : theme === 'dark'
-                      ? 'border-[var(--border)] hover:border-[color:color-mix(in_srgb,var(--action)_40%,var(--border)_60%)]'
-                      : 'border-[var(--border)] hover:border-[color:color-mix(in_srgb,var(--action)_38%,var(--border)_62%)]'
+                      ? "border-[var(--action)] bg-[color:color-mix(in_srgb,var(--action)_10%,transparent)]"
+                      : theme === "dark"
+                        ? "border-[var(--border)] hover:border-[color:color-mix(in_srgb,var(--action)_40%,var(--border)_60%)]"
+                        : "border-[var(--border)] hover:border-[color:color-mix(in_srgb,var(--action)_38%,var(--border)_62%)]"
                   }`}
                 >
-                  <div className={`font-semibold ${
-                    adjustmentType === type
-                      ? 'text-[var(--action)]'
-                      : theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <div
+                    className={`font-semibold ${
+                      adjustmentType === type ? "text-[var(--action)]" : "text-[var(--foreground)]"
+                    }`}
+                  >
                     {t.adjustmentTypes[type]}
                   </div>
-                  <div className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
+                  <div className="mt-1 text-xs text-[var(--muted)]">
                     {t.adjustmentTypeDescriptions[type]}
                   </div>
                 </button>
@@ -853,21 +866,22 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               value={quantity}
               onChange={(e) => {
                 setQuantity(parseInt(e.target.value) || 0);
-                setFormErrors({ ...formErrors, quantity: '' });
+                setFormErrors({ ...formErrors, quantity: "" });
               }}
-              className={`${inputClasses} ${formErrors.quantity ? 'border-red-500' : ''}`}
+              className={`${inputClasses} ${formErrors.quantity ? "border-red-500" : ""}`}
               placeholder={t.errors.quantityRequired}
             />
-            {formErrors.quantity && <p className="mt-1 text-sm text-red-500">{formErrors.quantity}</p>}
-            
+            {formErrors.quantity && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.quantity}</p>
+            )}
+
             {/* Batch Info */}
             {getSelectedBatch() && (
-              <div className={`mt-2 text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                {t.currentStockLabel}: <span className="font-medium">{getSelectedBatch()?.current_quantity}</span>
+              <div className="mt-2 text-sm text-[var(--muted)]">
+                {t.currentStockLabel}:{" "}
+                <span className="font-medium">{getSelectedBatch()?.current_quantity}</span>
                 {getSelectedBatch()?.is_expired && (
-                  <span className="ml-2 text-red-500">- {t.expiredWarning}</span>
+                  <span className="ml-2 text-[var(--danger)]">- {t.expiredWarning}</span>
                 )}
               </div>
             )}
@@ -880,32 +894,36 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
               value={reason}
               onChange={(e) => {
                 setReason(e.target.value);
-                setFormErrors({ ...formErrors, reason: '' });
+                setFormErrors({ ...formErrors, reason: "" });
               }}
-              className={`${inputClasses} min-h-[100px] resize-y ${formErrors.reason ? 'border-red-500' : ''}`}
+              className={`${inputClasses} min-h-[100px] resize-y ${formErrors.reason ? "border-red-500" : ""}`}
               placeholder={t.reasonPlaceholder}
             />
-            {formErrors.reason && <p className="mt-1 text-sm text-red-500">{formErrors.reason}</p>}
+            {formErrors.reason && (
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.reason}</p>
+            )}
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-3 border-t pt-6 ${
+        <div
+          className="mt-6 flex items-center justify-end gap-3 border-t pt-6 ${
           theme === 'dark' ? 'border-[var(--border)]' : 'border-[var(--border)]'
-        }">
+        }"
+        >
           <button
             type="button"
             onClick={() => {
               setSelectedProductId(null);
               setSelectedBatchId(null);
-              setAdjustmentType('add');
+              setAdjustmentType("add");
               setQuantity(1);
-              setReason('');
+              setReason("");
               setCreateNewBatch(false);
               setNewBatchForm({
-                batch_number: '',
-                expiry_date: '',
-                cost_price: '',
+                batch_number: "",
+                expiry_date: "",
+                cost_price: "",
               });
               setFormErrors({});
             }}
@@ -941,11 +959,7 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
             >
               {t.closePreviewButton}
             </button>
-            <button
-              onClick={handleSubmit}
-              className={buttonPrimaryClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleSubmit} className={buttonPrimaryClasses} disabled={isSubmitting}>
               {isSubmitting ? t.submitLoading : t.confirmButton}
             </button>
           </>
@@ -953,124 +967,75 @@ export const StockAdjustment: React.FC<StockAdjustmentProps> = ({
       >
         {preview && (
           <div className="space-y-4">
-            <div className={`p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'
-            }`}>
+            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_80%,transparent)] p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.product}
-                  </p>
-                  <p className={`font-medium ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {preview.product_name}
-                  </p>
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.product}</p>
+                  <p className="font-medium text-[var(--foreground)]">{preview.product_name}</p>
                 </div>
                 <div>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.batch}
-                  </p>
-                  <p className={`font-medium ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {preview.batch_number}
-                  </p>
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.batch}</p>
+                  <p className="font-medium text-[var(--foreground)]">{preview.batch_number}</p>
                 </div>
                 <div>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.type}
-                  </p>
-                  <p className={`font-medium capitalize ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.type}</p>
+                  <p className="font-medium capitalize text-[var(--foreground)]">
                     {t.adjustmentTypes[preview.adjustment_type]}
                   </p>
                 </div>
                 <div>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.reason}
-                  </p>
-                  <p className={`font-medium ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {preview.reason}
-                  </p>
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.reason}</p>
+                  <p className="font-medium text-[var(--foreground)]">{preview.reason}</p>
                 </div>
               </div>
             </div>
 
-            <div className={`p-4 rounded-lg border-2 ${
-              preview.adjustment_type === 'remove' || preview.adjustment_type === 'dispose'
-                ? theme === 'dark' ? 'border-red-800 bg-red-900/10' : 'border-red-200 bg-red-50'
-                : theme === 'dark' ? 'border-green-800 bg-green-900/10' : 'border-green-200 bg-green-50'
-            }`}>
+            <div
+              className={`rounded-[var(--radius-lg)] border p-4 ${
+                preview.adjustment_type === "remove" || preview.adjustment_type === "dispose"
+                  ? "border-[color:color-mix(in_srgb,var(--danger)_34%,transparent)] bg-[var(--danger-soft)]"
+                  : "border-[color:color-mix(in_srgb,var(--action)_34%,transparent)] bg-[var(--action-soft)]"
+              }`}
+            >
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.previousQty}
-                  </p>
-                  <p className={`text-2xl font-bold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.previousQty}</p>
+                  <p className="text-2xl font-bold text-[var(--foreground)]">
                     {preview.previous_quantity}
                   </p>
                 </div>
                 <div>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.change}
-                  </p>
-                  <p className={`text-2xl font-bold ${
-                    preview.quantity_change > 0
-                      ? 'text-green-600'
-                      : 'text-red-600'
-                  }`}>
-                    {preview.quantity_change > 0 ? '+' : ''}{preview.quantity_change}
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.change}</p>
+                  <p
+                    className={`text-2xl font-bold ${
+                      preview.quantity_change > 0 ? "text-[var(--action)]" : "text-[var(--danger)]"
+                    }`}
+                  >
+                    {preview.quantity_change > 0 ? "+" : ""}
+                    {preview.quantity_change}
                   </p>
                 </div>
                 <div>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.newQty}
-                  </p>
-                  <p className={`text-2xl font-bold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.newQty}</p>
+                  <p className="text-2xl font-bold text-[var(--foreground)]">
                     {preview.new_quantity}
                   </p>
                 </div>
               </div>
-              
+
               {preview.value_impact !== 0 && (
-                <div className={`mt-4 pt-4 border-t text-center ${
-                  theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
-                }`}>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {t.previewFields.valueImpact}
-                  </p>
-                  <p className={`text-xl font-bold ${
-                    preview.value_impact > 0
-                      ? 'text-green-600'
-                      : preview.value_impact < 0
-                      ? 'text-red-600'
-                      : theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    ${Math.abs(preview.value_impact).toFixed(2)}
+                <div className="mt-4 border-t border-[var(--border)] pt-4 text-center">
+                  <p className="text-sm text-[var(--muted)]">{t.previewFields.valueImpact}</p>
+                  <p
+                    className={`text-xl font-bold ${
+                      preview.value_impact > 0
+                        ? "text-[var(--action)]"
+                        : preview.value_impact < 0
+                          ? "text-[var(--danger)]"
+                          : "text-[var(--foreground)]"
+                    }`}
+                  >
+                    {Math.abs(preview.value_impact).toFixed(2)} EGP
                   </p>
                 </div>
               )}

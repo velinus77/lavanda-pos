@@ -36,7 +36,7 @@ export default function ProductsPage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
-          <p className="text-[var(--muted)]">{locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>
+          <p className="text-[var(--muted)]">{locale === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}</p>
         </div>
       </div>
     );
@@ -45,9 +45,9 @@ export default function ProductsPage() {
   const titles =
     locale === 'ar'
       ? {
-          overline: 'فهرس الأصناف',
-          main: 'المنتجات',
-          subtitle: 'راجع الأسعار والباركود والمخزون من نفس الواجهة الهادئة والواضحة.',
+          overline: 'كتالوج الأصناف',
+          main: 'الأصناف',
+          subtitle: 'راجع الأسعار والباركود وحالة المخزون من نفس الشاشة، من غير لف كتير.',
           home: 'الرئيسية',
         }
       : {
@@ -58,8 +58,8 @@ export default function ProductsPage() {
         };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-[var(--radius-xl)] border border-[color:color-mix(in_srgb,var(--accent)_18%,transparent)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_10%,var(--card)_90%),color-mix(in_srgb,var(--surface)_86%,transparent))] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+    <div className="lav-page">
+      <div className="lav-page-hero">
         <nav className="mb-4 text-sm text-[var(--muted)]" aria-label="Breadcrumb">
           <ol className="flex items-center gap-2 rtl:flex-row-reverse">
             <li>

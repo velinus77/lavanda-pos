@@ -1,100 +1,125 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import crypto from 'node:crypto';
+import { z } from 'zod';
 import { getRawClient } from '@lavanda/db';
 import { requireAuth, requireRole } from '../plugins/auth.js';
 import { writeAuditLog } from '../services/audit.service.js';
+import {
+  SUPPORTED_EXCHANGE_CURRENCIES,
+  getCurrentExchangeRateSnapshot,
+  getStoredExchangeRateSnapshot,
+  saveManualExchangeRates,
+} from '../services/exchange-rate.service.js';
+
+const manualRatesSchema = z.object({
+  rates: z.record(z.enum(SUPPORTED_EXCHANGE_CURRENCIES), z.coerce.number().positive()).refine(
+    (value) => Object.keys(value).length > 0,
+    'At least one manual rate is required'
+  ),
+});
+
+function mapSnapshot(snapshot: Awaited<ReturnType<typeof getCurrentExchangeRateSnapshot>>) {
+  return {
+    base: snapshot.base,
+    rates: snapshot.rates,
+    inverseRates: snapshot.inverseRates,
+    source: snapshot.source,
+    updatedAt: snapshot.updatedAt,
+    offlineMode: snapshot.offlineMode,
+    stale: snapshot.stale,
+    rateDetails: snapshot.rateDetails,
+  };
+}
 
 export const exchangeRatesRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-  /**
-   * GET /api/exchange-rates
-   * List all exchange rates (authenticated users)
-   */
-  fastify.get('/', { preHandler: [requireAuth] }, async (request, reply) => {
+  const loadCurrentSnapshot = async (forceRefresh = false) =>
+    getCurrentExchangeRateSnapshot({
+      sqlite: getRawClient(),
+      logger: fastify.log,
+      forceRefresh,
+    });
+
+  fastify.get('/', { preHandler: [requireAuth] }, async (_request, reply) => {
     try {
-      const sqlite = getRawClient();
-      const rows = sqlite.prepare(
-        `SELECT er.*, u.full_name as created_by_name
-         FROM exchange_rates er
-         LEFT JOIN users u ON er.created_by = u.id
-         ORDER BY er.created_at DESC`
-      ).all();
-      return reply.code(200).send({ data: rows });
+      const snapshot = await loadCurrentSnapshot(false);
+      return reply.code(200).send(mapSnapshot(snapshot));
     } catch (error) {
-      fastify.log.error({ err: error }, 'List exchange rates error');
+      fastify.log.error({ err: error }, 'Get exchange-rate snapshot error');
       return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to retrieve exchange rates' });
     }
   });
 
-  /**
-   * POST /api/exchange-rates
-   * Create new exchange rate (admin/manager only)
-   */
-  fastify.post('/', { preHandler: [requireAuth, requireRole('admin', 'manager')] }, async (request, reply) => {
+  fastify.get('/current', { preHandler: [requireAuth] }, async (_request, reply) => {
     try {
-      const { from_currency, to_currency, rate, effective_date } = request.body as any;
-
-      if (!from_currency || !to_currency || !rate) {
-        return reply.code(400).send({ error: 'Bad Request', message: 'from_currency, to_currency, and rate are required' });
-      }
-
-      const id = crypto.randomUUID();
-      const userId = (request as any).user?.userId ?? null;
-      const effDate = effective_date || new Date().toISOString().split('T')[0];
-      const sqlite = getRawClient();
-
-      sqlite.prepare(
-        `INSERT INTO exchange_rates (id, from_currency, to_currency, rate, effective_date, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
-      ).run(id, from_currency, to_currency, parseFloat(rate), effDate, userId);
-
-      const created = sqlite.prepare(`SELECT * FROM exchange_rates WHERE id = ?`).get(id);
-
-      await writeAuditLog(fastify, {
-        userId,
-        action: 'exchange_rate.create',
-        entity: 'exchange_rates',
-        entityId: id,
-        details: { from_currency, to_currency, rate },
-        ipAddress: request.ip,
-      });
-
-      return reply.code(201).send({ data: created });
+      const snapshot = await loadCurrentSnapshot(false);
+      return reply.code(200).send(mapSnapshot(snapshot));
     } catch (error) {
-      fastify.log.error({ err: error }, 'Create exchange rate error');
-      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to create exchange rate' });
+      fastify.log.error({ err: error }, 'Get current exchange-rate snapshot error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to retrieve current exchange rates' });
     }
   });
 
-  /**
-   * DELETE /api/exchange-rates/:id
-   * Delete an exchange rate (admin only)
-   */
-  fastify.delete('/:id', { preHandler: [requireAuth, requireRole('admin')] }, async (request, reply) => {
+  fastify.get('/history', { preHandler: [requireAuth] }, async (_request, reply) => {
     try {
-      const { id } = request.params as { id: string };
-      const userId = (request as any).user?.userId ?? null;
-      const sqlite = getRawClient();
+      const snapshot = getStoredExchangeRateSnapshot(getRawClient());
+      return reply.code(200).send({
+        base: snapshot.base,
+        updatedAt: snapshot.updatedAt,
+        rates: Object.values(snapshot.rateDetails),
+      });
+    } catch (error) {
+      fastify.log.error({ err: error }, 'List exchange-rate history error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to retrieve stored exchange rates' });
+    }
+  });
 
-      const existing = sqlite.prepare(`SELECT id FROM exchange_rates WHERE id = ?`).get(id);
-      if (!existing) {
-        return reply.code(404).send({ error: 'Not Found', message: 'Exchange rate not found' });
-      }
+  fastify.post('/refresh', { preHandler: [requireAuth, requireRole('admin', 'manager')] }, async (request, reply) => {
+    try {
+      const snapshot = await loadCurrentSnapshot(true);
+      await writeAuditLog(fastify, {
+        userId: (request as { user?: { userId?: string } }).user?.userId ?? null,
+        action: 'exchange_rate.refresh',
+        entity: 'exchange_rates',
+        entityId: 'live_refresh',
+        details: { source: snapshot.source, offlineMode: snapshot.offlineMode },
+        ipAddress: request.ip,
+      });
+      return reply.code(200).send(mapSnapshot(snapshot));
+    } catch (error) {
+      fastify.log.error({ err: error }, 'Refresh exchange-rate snapshot error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to refresh exchange rates' });
+    }
+  });
 
-      sqlite.prepare(`DELETE FROM exchange_rates WHERE id = ?`).run(id);
+  fastify.post('/manual', { preHandler: [requireAuth, requireRole('admin', 'manager')] }, async (request, reply) => {
+    try {
+      const payload = manualRatesSchema.parse(request.body);
+      const snapshot = saveManualExchangeRates(
+        getRawClient(),
+        payload.rates,
+        (request as { user?: { userId?: string } }).user?.userId ?? null
+      );
 
       await writeAuditLog(fastify, {
-        userId,
-        action: 'exchange_rate.delete',
+        userId: (request as { user?: { userId?: string } }).user?.userId ?? null,
+        action: 'exchange_rate.manual_override',
         entity: 'exchange_rates',
-        entityId: id,
-        details: {},
+        entityId: 'manual_override',
+        details: payload.rates,
         ipAddress: request.ip,
       });
 
-      return reply.code(200).send({ success: true });
+      return reply.code(200).send(mapSnapshot(snapshot));
     } catch (error) {
-      fastify.log.error({ err: error }, 'Delete exchange rate error');
-      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to delete exchange rate' });
+      if (error instanceof z.ZodError) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'Invalid manual exchange-rate payload',
+          details: error.errors.map((issue) => ({ field: issue.path.join('.'), message: issue.message })),
+        });
+      }
+
+      fastify.log.error({ err: error }, 'Manual exchange-rate override error');
+      return reply.code(500).send({ error: 'Internal Server Error', message: 'Failed to save manual exchange rates' });
     }
   });
 };

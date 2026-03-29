@@ -217,14 +217,14 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
                       onClick={() => onClose()}
                       className={`group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
                         isActive
-                          ? 'border border-[#c8ab76]/20 bg-[#182235] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+                          ? 'border border-[#27b485]/18 bg-[linear-gradient(180deg,rgba(15,28,42,0.92),rgba(12,24,36,0.98))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
                           : 'border border-transparent text-[#c3ccda] hover:border-white/8 hover:bg-white/[0.03] hover:text-white'
                       }`}
                     >
                       <span
                         className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${
                           isActive
-                            ? 'bg-[#d2ae71]/12 text-[#d2ae71]'
+                            ? 'bg-[#1f9d73]/16 text-[#5dd0aa]'
                             : 'bg-white/[0.04] text-[#9eabc0] group-hover:bg-white/[0.06] group-hover:text-white'
                         }`}
                       >

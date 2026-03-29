@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Modal from '../ui/Modal';
-import { authenticatedFetch } from '@/lib/auth';
+import React, { useState, useEffect, useCallback } from "react";
+import Modal from "../ui/Modal";
+import { authenticatedFetch } from "@/lib/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 interface Product {
   id: string;
@@ -69,94 +69,95 @@ interface Translations {
   };
 }
 
-const translations: Record<'ar' | 'en', Translations> = {
+const translations: Record<"ar" | "en", Translations> = {
   en: {
-    title: 'Expiry Monitor',
-    description: 'Track batches approaching expiry and manage expired stock',
-    expiringSoonTitle: 'Expiring Soon',
-    expiredTitle: 'Expired',
-    noExpiringSoon: 'No batches expiring in the next 30 days',
-    noExpired: 'No expired batches',
+    title: "Expiry Monitor",
+    description: "Track batches approaching expiry and manage expired stock",
+    expiringSoonTitle: "Expiring Soon",
+    expiredTitle: "Expired",
+    noExpiringSoon: "No batches expiring in the next 30 days",
+    noExpired: "No expired batches",
     columns: {
-      product: 'Product',
-      batchNumber: 'Batch Number',
-      expiryDate: 'Expiry Date',
-      daysRemaining: 'Days Remaining',
-      daysExpired: 'Days Expired',
-      quantity: 'Quantity',
-      value: 'Value',
-      actions: 'Actions',
+      product: "Product",
+      batchNumber: "Batch Number",
+      expiryDate: "Expiry Date",
+      daysRemaining: "Days Remaining",
+      daysExpired: "Days Expired",
+      quantity: "Quantity",
+      value: "Value",
+      actions: "Actions",
     },
-    disposeButton: 'Dispose',
-    disposeConfirm: 'Are you sure you want to dispose this expired batch? This action cannot be undone.',
-    disposeLoading: 'Disposing...',
-    successDispose: 'Batch disposed successfully',
-    errorFetch: 'Failed to load expiry data',
-    errorDispose: 'Failed to dispose batch',
+    disposeButton: "Dispose",
+    disposeConfirm:
+      "Are you sure you want to dispose this expired batch? This action cannot be undone.",
+    disposeLoading: "Disposing...",
+    successDispose: "Batch disposed successfully",
+    errorFetch: "Failed to load expiry data",
+    errorDispose: "Failed to dispose batch",
     statusBadges: {
-      critical: 'Critical (<7 days)',
-      warning: 'Warning (7-30 days)',
-      expired: 'Expired',
-      disposed: 'Disposed',
+      critical: "Critical (<7 days)",
+      warning: "Warning (7-30 days)",
+      expired: "Expired",
+      disposed: "Disposed",
     },
-    refreshButton: 'Refresh',
-    cancelButton: 'Cancel',
-    lastUpdated: 'Last updated',
-    filterPlaceholder: 'Filter by product name or batch number...',
-    sortBy: 'Sort by',
+    refreshButton: "Refresh",
+    cancelButton: "Cancel",
+    lastUpdated: "Last updated",
+    filterPlaceholder: "Filter by product name or batch number...",
+    sortBy: "Sort by",
     sortOptions: {
-      expiryAsc: 'Expiry Date (Soonest First)',
-      expiryDesc: 'Expiry Date (Latest First)',
-      valueDesc: 'Value (Highest First)',
-      quantityDesc: 'Quantity (Highest First)',
+      expiryAsc: "Expiry Date (Soonest First)",
+      expiryDesc: "Expiry Date (Latest First)",
+      valueDesc: "Value (Highest First)",
+      quantityDesc: "Quantity (Highest First)",
     },
   },
   ar: {
-    title: 'مراقبة الانتهاء',
-    description: 'تتبع الدفعات القريبة من الانتهاء وإ إدارة المخزون منتهي الصلاحية',
-    expiringSoonTitle: 'قرب الانتهاء',
-    expiredTitle: 'منتهي',
-    noExpiringSoon: 'لا توجد دفعات تنتهي خلال 30 يوماً القادمة',
-    noExpired: 'لا توجد دفعات منتهية',
+    title: "متابعة الصلاحية",
+    description: "تابع الدفعات اللي قربت تنتهي وخلّي المنتهي خارج البيع بسرعة.",
+    expiringSoonTitle: "قربت تنتهي",
+    expiredTitle: "منتهية",
+    noExpiringSoon: "مفيش دفعات هتنتهي خلال الـ 30 يوم الجايين",
+    noExpired: "مفيش دفعات منتهية",
     columns: {
-      product: 'المنتج',
-      batchNumber: 'رقم الدفعة',
-      expiryDate: 'تاريخ الانتهاء',
-      daysRemaining: 'أيام متبقية',
-      daysExpired: 'أيام منذ الانتهاء',
-      quantity: 'الكمية',
-      value: 'القيمة',
-      actions: 'الإجراءات',
+      product: "المنتج",
+      batchNumber: "رقم الدفعة",
+      expiryDate: "تاريخ الانتهاء",
+      daysRemaining: "أيام متبقية",
+      daysExpired: "أيام منذ الانتهاء",
+      quantity: "الكمية",
+      value: "القيمة",
+      actions: "الإجراءات",
     },
-    disposeButton: 'التخلص',
-    disposeConfirm: 'هل أنت متأكد من التخلص من هذه الدفعة منتهية الصلاحية؟ لا يمكن التراجع عن هذا الإجراء.',
-    disposeLoading: 'جاري التخلص...',
-    successDispose: 'تم التخلص من الدفعة بنجاح',
-    errorFetch: 'فشل تحميل بيانات الانتهاء',
-    errorDispose: 'فشل التخلص من الدفعة',
+    disposeButton: "إعدام",
+    disposeConfirm: "متأكد إنك عايز تعدم الدفعة المنتهية دي؟ الإجراء ده ملوش رجوع.",
+    disposeLoading: "بنعمل إعدام...",
+    successDispose: "تم إعدام الدفعة بنجاح",
+    errorFetch: "ماقدرناش نحمل بيانات الصلاحية",
+    errorDispose: "ماقدرناش نعدم الدفعة",
     statusBadges: {
-      critical: 'حرج (<7 أيام)',
-      warning: 'تحذير (7-30 يوم)',
-      expired: 'منتهي',
-      disposed: 'تم التخلص',
+      critical: "حرج (أقل من 7 أيام)",
+      warning: "تنبيه (من 7 لـ 30 يوم)",
+      expired: "منتهية",
+      disposed: "اتعدمت",
     },
-    refreshButton: 'تحديث',
-    cancelButton: 'إلغاء',
-    lastUpdated: 'آخر تحديث',
-    filterPlaceholder: 'تصفية باسم المنتج أو رقم الدفعة...',
-    sortBy: 'ترتيب حسب',
+    refreshButton: "حدّث",
+    cancelButton: "إلغاء",
+    lastUpdated: "آخر تحديث",
+    filterPlaceholder: "دوّر باسم الصنف أو رقم الدفعة...",
+    sortBy: "ترتيب حسب",
     sortOptions: {
-      expiryAsc: 'تاريخ الانتهاء (الأقرب أولاً)',
-      expiryDesc: 'تاريخ الانتهاء (الأبعد أولاً)',
-      valueDesc: 'القيمة (الأعلى أولاً)',
-      quantityDesc: 'الكمية (الأعلى أولاً)',
+      expiryAsc: "تاريخ الانتهاء (الأقرب الأول)",
+      expiryDesc: "تاريخ الانتهاء (الأبعد الأول)",
+      valueDesc: "القيمة (الأعلى أولاً)",
+      quantityDesc: "الكمية (الأعلى أولاً)",
     },
   },
 };
 
 export interface ExpiryMonitorProps {
-  locale?: 'ar' | 'en';
-  theme?: 'light' | 'dark';
+  locale?: "ar" | "en";
+  theme?: "light" | "dark";
   expiringApiUrl?: string;
   expiredApiUrl?: string;
   disposeApiUrl?: string;
@@ -164,15 +165,28 @@ export interface ExpiryMonitorProps {
 }
 
 export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
-  locale = 'en',
-  theme = 'light',
+  locale = "en",
+  theme = "light",
   expiringApiUrl = `${API_BASE}/api/stock/expiring`,
   expiredApiUrl = `${API_BASE}/api/stock/expired`,
   disposeApiUrl = `${API_BASE}/api/stock/expired/dispose`,
   onDispose,
 }) => {
   const t = translations[locale];
-  const isRTL = locale === 'ar';
+  const isRTL = locale === "ar";
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG", {
+      style: "currency",
+      currency: "EGP",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB");
+
+  const formatDateTime = (value: Date) => value.toLocaleString(locale === "ar" ? "ar-EG" : "en-GB");
 
   const [expiringBatches, setExpiringBatches] = useState<ExpiringBatch[]>([]);
   const [expiredBatches, setExpiredBatches] = useState<ExpiringBatch[]>([]);
@@ -181,9 +195,13 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const [filterQuery, setFilterQuery] = useState('');
-  const [expiringSort, setExpiringSort] = useState<'expiryAsc' | 'expiryDesc' | 'valueDesc' | 'quantityDesc'>('expiryAsc');
-  const [expiredSort, setExpiredSort] = useState<'expiryAsc' | 'expiryDesc' | 'valueDesc' | 'quantityDesc'>('expiryAsc');
+  const [filterQuery, setFilterQuery] = useState("");
+  const [expiringSort, setExpiringSort] = useState<
+    "expiryAsc" | "expiryDesc" | "valueDesc" | "quantityDesc"
+  >("expiryAsc");
+  const [expiredSort, setExpiredSort] = useState<
+    "expiryAsc" | "expiryDesc" | "valueDesc" | "quantityDesc"
+  >("expiryAsc");
 
   const [disposeModalOpen, setDisposeModalOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<ExpiringBatch | null>(null);
@@ -197,12 +215,12 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
       const [expiringRes, expiredRes] = await Promise.all([
         authenticatedFetch(expiringApiUrl, {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }),
         authenticatedFetch(expiredApiUrl, {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }),
       ]);
@@ -236,13 +254,13 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
     setIsDisposing(true);
     try {
       const response = await authenticatedFetch(disposeApiUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           batch_ids: [selectedBatch.id],
-          reason: 'Expired batch disposal',
+          reason: "Expired batch disposal",
         }),
       });
 
@@ -253,13 +271,13 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
       setSuccessMessage(t.successDispose);
       setDisposeModalOpen(false);
       setSelectedBatch(null);
-      
+
       // Refresh data
       await fetchExpiryData();
-      
+
       // Call callback
       onDispose?.();
-      
+
       // Clear success message after 5 seconds
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
@@ -276,14 +294,14 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
 
   const filterBatches = (batches: ExpiringBatch[]) => {
     if (!filterQuery.trim()) return batches;
-    
+
     const query = filterQuery.toLowerCase();
     return batches.filter((batch) => {
-      const matchesProduct = batch.product && (
-        batch.product.name_en.toLowerCase().includes(query) ||
-        batch.product.name_ar.includes(filterQuery) ||
-        batch.product.barcode.toLowerCase().includes(query)
-      );
+      const matchesProduct =
+        batch.product &&
+        (batch.product.name_en.toLowerCase().includes(query) ||
+          batch.product.name_ar.includes(filterQuery) ||
+          batch.product.barcode.toLowerCase().includes(query));
       const matchesBatch = batch.batch_number.toLowerCase().includes(query);
       return matchesProduct || matchesBatch;
     });
@@ -292,13 +310,13 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
   const sortBatches = (batches: ExpiringBatch[], sortType: string) => {
     return [...batches].sort((a, b) => {
       switch (sortType) {
-        case 'expiryAsc':
+        case "expiryAsc":
           return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
-        case 'expiryDesc':
+        case "expiryDesc":
           return new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime();
-        case 'valueDesc':
+        case "valueDesc":
           return b.total_value - a.total_value;
-        case 'quantityDesc':
+        case "quantityDesc":
           return b.current_quantity - a.current_quantity;
         default:
           return 0;
@@ -307,154 +325,111 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
   };
 
   const getExpiringStatus = (days: number) => {
-    if (days <= 0) return { label: t.statusBadges.expired, color: 'red' };
-    if (days <= 7) return { label: t.statusBadges.critical, color: 'red' };
-    if (days <= 30) return { label: t.statusBadges.warning, color: 'yellow' };
-    return { label: 'OK', color: 'green' };
+    if (days <= 0) return { label: t.statusBadges.expired, color: "red" };
+    if (days <= 7) return { label: t.statusBadges.critical, color: "red" };
+    if (days <= 30) return { label: t.statusBadges.warning, color: "yellow" };
+    return { label: "OK", color: "green" };
   };
 
-  const filteredExpiring = sortBatches(filterBatches(expiringBatches).filter(b => !b.is_expired), expiringSort);
-  const filteredExpired = sortBatches(filterBatches(expiredBatches).filter(b => b.is_expired && !b.is_disposed), expiredSort);
+  const filteredExpiring = sortBatches(
+    filterBatches(expiringBatches).filter((b) => !b.is_expired),
+    expiringSort
+  );
+  const filteredExpired = sortBatches(
+    filterBatches(expiredBatches).filter((b) => b.is_expired && !b.is_disposed),
+    expiredSort
+  );
 
-  const inputClasses = `w-full px-4 py-2.5 rounded-lg border transition-all outline-none ${
-    theme === 'dark'
-      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
+  const inputClasses =
+    "w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-[var(--foreground)] outline-none transition-all placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--action)_14%,transparent)]";
+
+  const labelClasses = "mb-2 block text-sm font-medium text-[var(--foreground)]";
+
+  const buttonPrimaryClasses = `rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-2.5 font-semibold text-white transition-all ${
+    isDisposing ? "cursor-not-allowed opacity-60" : "hover:opacity-90"
   }`;
 
-  const labelClasses = `block text-sm font-medium mb-2 ${
-    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-  }`;
+  const buttonSecondaryClasses =
+    "rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 font-semibold text-[var(--foreground)] transition-all hover:bg-[var(--surface-strong)]";
 
-  const buttonPrimaryClasses = `px-4 py-2.5 rounded-lg font-semibold text-white transition-all ${
-    isDisposing
-      ? 'bg-red-400 cursor-not-allowed'
-      : 'bg-red-600 hover:bg-red-700'
-  }`;
-
-  const buttonSecondaryClasses = `px-4 py-2.5 rounded-lg font-semibold transition-all ${
-    theme === 'dark'
-      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-  }`;
+  const sectionHeaderClasses = `mb-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_320px] md:items-center`;
 
   const BatchCard: React.FC<{
     batch: ExpiringBatch;
     isExpired: boolean;
   }> = ({ batch, isExpired }) => {
     const status = getExpiringStatus(batch.days_until_expiry);
-    
+
     return (
-      <div className={`p-4 rounded-lg border transition-all ${
-        theme === 'dark'
-          ? 'border-gray-700 bg-gray-800/50 hover:bg-gray-800'
-          : 'border-gray-200 bg-white hover:bg-gray-50'
-      } ${batch.is_disposed ? 'opacity-50' : ''}`}>
+      <div
+        className={`rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] p-4 transition-all hover:bg-[color:color-mix(in_srgb,var(--surface)_82%,transparent)] ${batch.is_disposed ? "opacity-50" : ""}`}
+      >
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <h3 className={`font-semibold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              {batch.product && (locale === 'ar' ? batch.product.name_ar : batch.product.name_en)}
+            <h3 className="font-semibold text-[var(--foreground)]">
+              {batch.product && (locale === "ar" ? batch.product.name_ar : batch.product.name_en)}
             </h3>
             {batch.product && (
-              <p className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}>
-                {batch.product.barcode}
-              </p>
+              <p className="text-sm text-[var(--muted)]">{batch.product.barcode}</p>
             )}
           </div>
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            status.color === 'red'
-              ? theme === 'dark' ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
-              : status.color === 'yellow'
-              ? theme === 'dark' ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
-              : theme === 'dark' ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
-          }`}>
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              status.color === "red"
+                ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                : status.color === "yellow"
+                  ? "bg-[var(--warning-soft)] text-[var(--warning)]"
+                  : "bg-[var(--action-soft)] text-[var(--action)]"
+            }`}
+          >
             {status.label}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-4">
           <div>
-            <p className={`text-xs ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-            }`}>
-              {t.columns.batchNumber}
-            </p>
-            <p className={`font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {batch.batch_number}
-            </p>
+            <p className="text-xs text-[var(--muted)]">{t.columns.batchNumber}</p>
+            <p className="font-medium text-[var(--foreground)]">{batch.batch_number}</p>
           </div>
           <div>
-            <p className={`text-xs ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-            }`}>
-              {t.columns.expiryDate}
-            </p>
-            <p className={`font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {new Date(batch.expiry_date).toLocaleDateString()}
-            </p>
+            <p className="text-xs text-[var(--muted)]">{t.columns.expiryDate}</p>
+            <p className="font-medium text-[var(--foreground)]">{formatDate(batch.expiry_date)}</p>
           </div>
           <div>
-            <p className={`text-xs ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-            }`}>
+            <p className="text-xs text-[var(--muted)]">
               {isExpired ? t.columns.daysExpired : t.columns.daysRemaining}
             </p>
-            <p className={`font-bold ${
-              batch.days_until_expiry <= 7
-                ? 'text-red-600'
-                : batch.days_until_expiry <= 30
-                ? 'text-yellow-600'
-                : theme === 'dark' ? 'text-green-400' : 'text-green-600'
-            }`}>
-              {isExpired ? Math.abs(batch.days_until_expiry) : batch.days_until_expiry} {isExpired ? 'days' : 'days'}
+            <p
+              className={`font-bold ${
+                batch.days_until_expiry <= 7
+                  ? "text-[var(--danger)]"
+                  : batch.days_until_expiry <= 30
+                    ? "text-[var(--warning)]"
+                    : "text-[var(--action)]"
+              }`}
+            >
+              {isExpired ? Math.abs(batch.days_until_expiry) : batch.days_until_expiry}{" "}
+              {isExpired ? "days" : "days"}
             </p>
           </div>
           <div>
-            <p className={`text-xs ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-            }`}>
-              {t.columns.quantity}
-            </p>
-            <p className={`font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}>
-              {batch.current_quantity}
-            </p>
+            <p className="text-xs text-[var(--muted)]">{t.columns.quantity}</p>
+            <p className="font-medium text-[var(--foreground)]">{batch.current_quantity}</p>
           </div>
         </div>
 
-        <div className={`flex items-center justify-between pt-3 border-t ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-        }`}>
+        <div className="flex items-end justify-between gap-4 border-t border-[var(--border)] pt-3">
           <div>
-            <p className={`text-xs ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-            }`}>
-              {t.columns.value}
-            </p>
-            <p className={`font-bold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              ${batch.total_value.toFixed(2)}
+            <p className="text-xs text-[var(--muted)]">{t.columns.value}</p>
+            <p className="font-bold text-[var(--foreground)]">
+              {formatCurrency(batch.total_value)}
             </p>
           </div>
-          
+
           {isExpired && !batch.is_disposed && (
             <button
               onClick={() => openDisposeModal(batch)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                theme === 'dark'
-                  ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50 hover:text-red-300'
-                  : 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800'
-              }`}
+              className="rounded-[var(--radius-md)] bg-[var(--danger-soft)] px-3 py-1.5 text-sm font-medium text-[var(--danger)] transition-all hover:opacity-90"
             >
               {t.disposeButton}
             </button>
@@ -465,21 +440,13 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
+    <div dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
           <div>
-            <h1 className={`text-2xl font-bold mb-1 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              {t.title}
-            </h1>
-            <p className={`${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              {t.description}
-            </p>
+            <h1 className="mb-1 text-2xl font-bold text-[var(--foreground)]">{t.title}</h1>
+            <p className="text-[var(--muted)]">{t.description}</p>
           </div>
           <button
             onClick={fetchExpiryData}
@@ -488,38 +455,38 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
               buttonSecondaryClasses
             }`}
           >
-            <svg className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg
+              className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
             {t.refreshButton}
           </button>
         </div>
-        
-        <div className={`text-sm ${
-          theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
-        }`}>
-          {t.lastUpdated}: {lastUpdated.toLocaleString()}
+
+        <div className="text-sm text-[var(--muted)]">
+          {t.lastUpdated}: {formatDateTime(lastUpdated)}
         </div>
       </div>
 
       {/* Success Message */}
       {successMessage && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          theme === 'dark'
-            ? 'bg-green-900/20 border-green-800 text-green-300'
-            : 'bg-green-50 border-green-200 text-green-700'
-        }`}>
+        <div className="mb-6 rounded-[var(--radius-lg)] border border-[color:color-mix(in_srgb,var(--action)_34%,transparent)] bg-[var(--action-soft)] p-4 text-[var(--action)]">
           {successMessage}
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          theme === 'dark'
-            ? 'bg-red-900/20 border-red-800 text-red-300'
-            : 'bg-red-50 border-red-200 text-red-700'
-        }`}>
+        <div className="mb-6 rounded-[var(--radius-lg)] border border-[color:color-mix(in_srgb,var(--danger)_34%,transparent)] bg-[var(--danger-soft)] p-4 text-[var(--danger)]">
           {error}
         </div>
       )}
@@ -537,29 +504,34 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
 
       {/* Loading State */}
       {isLoading ? (
-        <div className={`text-center py-12 ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-        }`}>
+        <div className="py-12 text-center text-[var(--muted)]">
           <svg className="animate-spin h-8 w-8 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
-          Loading...
+          {locale === "ar" ? "جارٍ التحميل..." : "Loading..."}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Expiring Soon Column */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {t.expiringSoonTitle}
-              </h2>
+            <div className={sectionHeaderClasses}>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">{t.expiringSoonTitle}</h2>
               <select
                 value={expiringSort}
                 onChange={(e) => setExpiringSort(e.target.value as any)}
-                className={`${inputClasses} w-auto text-sm`}
+                className={`${inputClasses} min-w-0 text-sm`}
               >
                 <option value="expiryAsc">{t.sortOptions.expiryAsc}</option>
                 <option value="expiryDesc">{t.sortOptions.expiryDesc}</option>
@@ -567,13 +539,9 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
                 <option value="quantityDesc">{t.sortOptions.quantityDesc}</option>
               </select>
             </div>
-            
+
             {filteredExpiring.length === 0 ? (
-              <div className={`p-8 rounded-lg border text-center ${
-                theme === 'dark'
-                  ? 'border-gray-700 bg-gray-800/50 text-gray-400'
-                  : 'border-gray-200 bg-gray-50 text-gray-500'
-              }`}>
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_80%,transparent)] p-8 text-center text-[var(--muted)]">
                 {t.noExpiringSoon}
               </div>
             ) : (
@@ -587,16 +555,12 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
 
           {/* Expired Column */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {t.expiredTitle}
-              </h2>
+            <div className={sectionHeaderClasses}>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">{t.expiredTitle}</h2>
               <select
                 value={expiredSort}
                 onChange={(e) => setExpiredSort(e.target.value as any)}
-                className={`${inputClasses} w-auto text-sm`}
+                className={`${inputClasses} min-w-0 text-sm`}
               >
                 <option value="expiryAsc">{t.sortOptions.expiryAsc}</option>
                 <option value="expiryDesc">{t.sortOptions.expiryDesc}</option>
@@ -604,13 +568,9 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
                 <option value="quantityDesc">{t.sortOptions.quantityDesc}</option>
               </select>
             </div>
-            
+
             {filteredExpired.length === 0 ? (
-              <div className={`p-8 rounded-lg border text-center ${
-                theme === 'dark'
-                  ? 'border-gray-700 bg-gray-800/50 text-gray-400'
-                  : 'border-gray-200 bg-gray-50 text-gray-500'
-              }`}>
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_80%,transparent)] p-8 text-center text-[var(--muted)]">
                 {t.noExpired}
               </div>
             ) : (
@@ -644,75 +604,42 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
               className={buttonSecondaryClasses}
               disabled={isDisposing}
             >
-              {t.cancelButton || 'Cancel'}
+              {t.cancelButton || "Cancel"}
             </button>
-            <button
-              onClick={handleDispose}
-              className={buttonPrimaryClasses}
-              disabled={isDisposing}
-            >
+            <button onClick={handleDispose} className={buttonPrimaryClasses} disabled={isDisposing}>
               {isDisposing ? t.disposeLoading : t.disposeButton}
             </button>
           </>
         }
       >
-        <p className={`${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-        }`}>
-          {t.disposeConfirm}
-        </p>
-        
+        <p className="text-[var(--foreground)]">{t.disposeConfirm}</p>
+
         {selectedBatch && (
-          <div className={`mt-4 p-4 rounded-lg ${
-            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'
-          }`}>
+          <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_80%,transparent)] p-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  {t.columns.product}
-                </p>
-                <p className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {selectedBatch.product && (locale === 'ar' ? selectedBatch.product.name_ar : selectedBatch.product.name_en)}
+                <p className="text-sm text-[var(--muted)]">{t.columns.product}</p>
+                <p className="font-medium text-[var(--foreground)]">
+                  {selectedBatch.product &&
+                    (locale === "ar"
+                      ? selectedBatch.product.name_ar
+                      : selectedBatch.product.name_en)}
                 </p>
               </div>
               <div>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  {t.columns.batchNumber}
-                </p>
-                <p className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {selectedBatch.batch_number}
-                </p>
+                <p className="text-sm text-[var(--muted)]">{t.columns.batchNumber}</p>
+                <p className="font-medium text-[var(--foreground)]">{selectedBatch.batch_number}</p>
               </div>
               <div>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  {t.columns.quantity}
-                </p>
-                <p className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
+                <p className="text-sm text-[var(--muted)]">{t.columns.quantity}</p>
+                <p className="font-medium text-[var(--foreground)]">
                   {selectedBatch.current_quantity}
                 </p>
               </div>
               <div>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  {t.columns.value}
-                </p>
-                <p className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  ${selectedBatch.total_value.toFixed(2)}
+                <p className="text-sm text-[var(--muted)]">{t.columns.value}</p>
+                <p className="font-medium text-[var(--foreground)]">
+                  {formatCurrency(selectedBatch.total_value)}
                 </p>
               </div>
             </div>
@@ -724,4 +651,3 @@ export const ExpiryMonitor: React.FC<ExpiryMonitorProps> = ({
 };
 
 export default ExpiryMonitor;
-

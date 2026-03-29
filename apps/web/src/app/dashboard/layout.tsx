@@ -123,12 +123,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       className={`min-h-screen bg-[var(--background)] text-[var(--foreground)] ${isRTL ? 'rtl' : 'ltr'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      <div className="fixed inset-x-0 top-0 h-64 bg-[linear-gradient(180deg,rgba(156,122,69,0.08),transparent)] dark:bg-[linear-gradient(180deg,rgba(184,148,90,0.10),transparent)]" aria-hidden="true" />
+      <div className="fixed inset-x-0 top-0 h-52 bg-[linear-gradient(180deg,rgba(156,122,69,0.06),transparent)] dark:bg-[linear-gradient(180deg,rgba(184,148,90,0.07),transparent)]" aria-hidden="true" />
       <Sidebar user={user} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className={`relative ${isRTL ? 'lg:pr-72' : 'lg:pl-72'}`}>
-        <header className="sticky top-0 z-30 border-b border-[color:color-mix(in_srgb,var(--border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--background)_84%,transparent)] px-4 py-4 backdrop-blur sm:px-6">
-          <div className="flex items-start justify-between gap-4">
+        <header className="sticky top-0 z-30 border-b border-[color:color-mix(in_srgb,var(--border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--background)_88%,transparent)] px-4 py-3 backdrop-blur sm:px-6">
+          <div className="mx-auto flex w-full max-w-[1440px] items-start justify-between gap-4">
               <div className="flex min-w-0 items-start gap-3">
                 <button
                   onClick={() => setSidebarOpen(true)}
@@ -144,7 +144,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
                     {copy.workspace}
                   </p>
-                  <h1 className="truncate text-[28px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">
+                  <h1 className="truncate text-[25px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">
                     {pageTitle}
                   </h1>
                   <p className="mt-1 text-sm text-[var(--muted)]">
@@ -182,7 +182,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </span>
                 </button>
 
-                <div className="hidden items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 sm:flex">
+                <div className="hidden items-center gap-3 rounded-[var(--radius-md)] border border-[color:color-mix(in_srgb,var(--border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] px-3 py-2 sm:flex">
                   <div className="text-right rtl:text-left">
                     <p className="text-sm font-semibold text-[var(--foreground)]">{user.full_name}</p>
                     <p className="text-xs text-[var(--muted)]">{user.email}</p>
@@ -206,8 +206,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
         </header>
 
-        <main className="px-4 pb-8 sm:px-6">
-          <div className="rounded-[var(--radius-shell)] border border-[color:color-mix(in_srgb,var(--border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--card)_94%,transparent)] p-4 shadow-[0_18px_44px_rgba(15,23,42,0.05)] backdrop-blur sm:p-6">
+        <main className="px-4 pb-8 pt-6 sm:px-6">
+          <div className="mx-auto w-full max-w-[1440px]">
             {children}
           </div>
         </main>

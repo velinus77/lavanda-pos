@@ -11,6 +11,7 @@ import {
   InsufficientStockError,
   ProductNotFoundError,
   ExpiredBatchError,
+  ExchangeRateNotFoundError,
 } from '../services/pos.service.js';
 
 export const posRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
@@ -84,6 +85,13 @@ export const posRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
             error: 'EXPIRED_BATCH',
             message: error.message,
             batchId: error.batchId,
+          });
+        }
+        if (error instanceof ExchangeRateNotFoundError) {
+          return reply.code(422).send({
+            error: 'EXCHANGE_RATE_NOT_FOUND',
+            message: error.message,
+            currency: error.currency,
           });
         }
         fastify.log.error({ err: error }, 'Checkout error');

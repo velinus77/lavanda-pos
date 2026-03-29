@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Modal from '../ui/Modal';
-import { getAuthToken } from '@/lib/auth';
+import React, { useState, useEffect, useCallback } from "react";
+import Modal from "../ui/Modal";
+import { getAuthToken } from "@/lib/auth";
 
 interface Supplier {
   id: number;
@@ -52,89 +52,89 @@ interface Translations {
   deleteError: string;
 }
 
-const translations: Record<'ar' | 'en', Translations> = {
+const translations: Record<"ar" | "en", Translations> = {
   en: {
-    title: 'Suppliers',
-    searchPlaceholder: 'Search suppliers...',
-    addButton: 'Add Supplier',
-    editButton: 'Edit',
-    deleteButton: 'Delete',
-    deactivateButton: 'Deactivate',
-    activateButton: 'Activate',
-    noSuppliers: 'No suppliers found',
-    addModalTitle: 'Add New Supplier',
-    editModalTitle: 'Edit Supplier',
-    deleteModalTitle: 'Delete Supplier',
-    nameEnLabel: 'Company Name (English)',
-    nameArLabel: 'Company Name (Arabic)',
-    contactNameEnLabel: 'Contact Name (English)',
-    contactNameArLabel: 'Contact Name (Arabic)',
-    emailLabel: 'Email',
-    phoneLabel: 'Phone',
-    addressEnLabel: 'Address (English)',
-    addressArLabel: 'Address (Arabic)',
-    isActiveLabel: 'Active',
-    saveButton: 'Save',
-    savingButton: 'Saving...',
-    cancelButton: 'Cancel',
-    deleteConfirm: 'Are you sure you want to delete this supplier? This action cannot be undone.',
-    deleteLoading: 'Deleting...',
-    errorRequired: 'This field is required',
-    errorInvalidEmail: 'Invalid email format',
-    fetchError: 'Failed to load suppliers',
-    saveError: 'Failed to save supplier',
-    deleteError: 'Failed to delete supplier',
+    title: "Suppliers",
+    searchPlaceholder: "Search suppliers...",
+    addButton: "Add Supplier",
+    editButton: "Edit",
+    deleteButton: "Delete",
+    deactivateButton: "Deactivate",
+    activateButton: "Activate",
+    noSuppliers: "No suppliers found",
+    addModalTitle: "Add New Supplier",
+    editModalTitle: "Edit Supplier",
+    deleteModalTitle: "Delete Supplier",
+    nameEnLabel: "Company Name (English)",
+    nameArLabel: "Company Name (Arabic)",
+    contactNameEnLabel: "Contact Name (English)",
+    contactNameArLabel: "Contact Name (Arabic)",
+    emailLabel: "Email",
+    phoneLabel: "Phone",
+    addressEnLabel: "Address (English)",
+    addressArLabel: "Address (Arabic)",
+    isActiveLabel: "Active",
+    saveButton: "Save",
+    savingButton: "Saving...",
+    cancelButton: "Cancel",
+    deleteConfirm: "Are you sure you want to delete this supplier? This action cannot be undone.",
+    deleteLoading: "Deleting...",
+    errorRequired: "This field is required",
+    errorInvalidEmail: "Invalid email format",
+    fetchError: "Failed to load suppliers",
+    saveError: "Failed to save supplier",
+    deleteError: "Failed to delete supplier",
   },
   ar: {
-    title: 'الموردين',
-    searchPlaceholder: 'البحث عن الموردين...',
-    addButton: 'إضافة مورد',
-    editButton: 'تعديل',
-    deleteButton: 'حذف',
-    deactivateButton: 'إلغاء التفعيل',
-    activateButton: 'تفعيل',
-    noSuppliers: 'لا يوجد موردين',
-    addModalTitle: 'إضافة مورد جديد',
-    editModalTitle: 'تعديل المورد',
-    deleteModalTitle: 'حذف المورد',
-    nameEnLabel: 'اسم الشركة (إنجليزي)',
-    nameArLabel: 'اسم الشركة (عربي)',
-    contactNameEnLabel: 'اسم جهة الاتصال (إنجليزي)',
-    contactNameArLabel: 'اسم جهة الاتصال (عربي)',
-    emailLabel: 'البريد الإلكتروني',
-    phoneLabel: 'الهاتف',
-    addressEnLabel: 'العنوان (إنجليزي)',
-    addressArLabel: 'العنوان (عربي)',
-    isActiveLabel: 'نشط',
-    saveButton: 'حفظ',
-    savingButton: 'جاري الحفظ...',
-    cancelButton: 'إلغاء',
-    deleteConfirm: 'هل أنت متأكد من حذف هذا المورد؟ لا يمكن التراجع عن هذا الإجراء.',
-    deleteLoading: 'جاري الحذف...',
-    errorRequired: 'هذا الحقل مطلوب',
-    errorInvalidEmail: 'صيغة البريد الإلكتروني غير صحيحة',
-    fetchError: 'فشل تحميل الموردين',
-    saveError: 'فشل حفظ المورد',
-    deleteError: 'فشل حذف المورد',
+    title: "المورّدين",
+    searchPlaceholder: "دوّر على مورّد...",
+    addButton: "ضيف مورّد",
+    editButton: "تعديل",
+    deleteButton: "حذف",
+    deactivateButton: "وقفه",
+    activateButton: "فعّله",
+    noSuppliers: "مفيش مورّدين",
+    addModalTitle: "ضيف مورّد جديد",
+    editModalTitle: "تعديل المورّد",
+    deleteModalTitle: "حذف المورّد",
+    nameEnLabel: "اسم الشركة (إنجليزي)",
+    nameArLabel: "اسم الشركة (عربي)",
+    contactNameEnLabel: "اسم جهة الاتصال (إنجليزي)",
+    contactNameArLabel: "اسم جهة الاتصال (عربي)",
+    emailLabel: "الإيميل",
+    phoneLabel: "الهاتف",
+    addressEnLabel: "العنوان (إنجليزي)",
+    addressArLabel: "العنوان (عربي)",
+    isActiveLabel: "نشط",
+    saveButton: "احفظ",
+    savingButton: "بنحفظ...",
+    cancelButton: "إلغاء",
+    deleteConfirm: "متأكد إنك عايز تمسح المورّد ده؟ مش هتقدر ترجّعه بعد كده.",
+    deleteLoading: "بنحذف...",
+    errorRequired: "الخانة دي مطلوبة",
+    errorInvalidEmail: "الإيميل مش بصيغة صحيحة",
+    fetchError: "ماقدرناش نحمل بيانات المورّدين",
+    saveError: "ماقدرناش نحفظ بيانات المورّد",
+    deleteError: "ماقدرناش نمسح المورّد",
   },
 };
 
 export interface SupplierManagerProps {
-  locale?: 'ar' | 'en';
-  theme?: 'light' | 'dark';
+  locale?: "ar" | "en";
+  theme?: "light" | "dark";
   apiUrl?: string;
 }
 
 export const SupplierManager: React.FC<SupplierManagerProps> = ({
-  locale = 'en',
-  theme = 'light',
-  apiUrl = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/suppliers`,
+  locale = "en",
+  theme = "light",
+  apiUrl = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/suppliers`,
 }) => {
   const t = translations[locale];
-  const isRTL = locale === 'ar';
+  const isRTL = locale === "ar";
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -146,14 +146,14 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
 
   // Form states
   const [formData, setFormData] = useState({
-    name_en: '',
-    name_ar: '',
-    contact_name_en: '',
-    contact_name_ar: '',
-    email: '',
-    phone: '',
-    address_en: '',
-    address_ar: '',
+    name_en: "",
+    name_ar: "",
+    contact_name_en: "",
+    contact_name_ar: "",
+    email: "",
+    phone: "",
+    address_en: "",
+    address_ar: "",
     is_active: true,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -162,7 +162,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
   const getAuthHeaders = useCallback(() => {
     const token = getAuthToken();
     return {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   }, []);
@@ -174,13 +174,13 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
       const response = await fetch(apiUrl, {
         headers: getAuthHeaders(),
       });
-      
+
       if (!response.ok) {
         throw new Error(t.fetchError);
       }
-      
+
       const data = await response.json();
-      setSuppliers(Array.isArray(data) ? data : data.suppliers ?? []);
+      setSuppliers(Array.isArray(data) ? data : (data.suppliers ?? []));
     } catch (err) {
       setError(err instanceof Error ? err.message : t.fetchError);
     } finally {
@@ -206,14 +206,14 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
 
   const openAddModal = () => {
     setFormData({
-      name_en: '',
-      name_ar: '',
-      contact_name_en: '',
-      contact_name_ar: '',
-      email: '',
-      phone: '',
-      address_en: '',
-      address_ar: '',
+      name_en: "",
+      name_ar: "",
+      contact_name_en: "",
+      contact_name_ar: "",
+      email: "",
+      phone: "",
+      address_en: "",
+      address_ar: "",
       is_active: true,
     });
     setFormErrors({});
@@ -225,12 +225,12 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
     setFormData({
       name_en: supplier.name_en,
       name_ar: supplier.name_ar,
-      contact_name_en: supplier.contact_name_en || '',
-      contact_name_ar: supplier.contact_name_ar || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      address_en: supplier.address_en || '',
-      address_ar: supplier.address_ar || '',
+      contact_name_en: supplier.contact_name_en || "",
+      contact_name_ar: supplier.contact_name_ar || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address_en: supplier.address_en || "",
+      address_ar: supplier.address_ar || "",
       is_active: supplier.is_active,
     });
     setFormErrors({});
@@ -258,10 +258,8 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
 
     setIsSubmitting(true);
     try {
-      const url = selectedSupplier
-        ? `${apiUrl}/${selectedSupplier.id}`
-        : apiUrl;
-      const method = selectedSupplier ? 'PUT' : 'POST';
+      const url = selectedSupplier ? `${apiUrl}/${selectedSupplier.id}` : apiUrl;
+      const method = selectedSupplier ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
@@ -290,7 +288,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
     setIsSubmitting(true);
     try {
       const response = await fetch(`${apiUrl}/${selectedSupplier.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: getAuthHeaders(),
       });
 
@@ -308,50 +306,54 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
     }
   }, [apiUrl, fetchSuppliers, getAuthHeaders, selectedSupplier, t.deleteError]);
 
-  const handleToggleActive = useCallback(async (supplier: Supplier) => {
-    try {
-      const response = await fetch(`${apiUrl}/${supplier.id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          is_active: !supplier.is_active,
-        }),
-      });
+  const handleToggleActive = useCallback(
+    async (supplier: Supplier) => {
+      try {
+        const response = await fetch(`${apiUrl}/${supplier.id}`, {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            is_active: !supplier.is_active,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(t.saveError);
+        if (!response.ok) {
+          throw new Error(t.saveError);
+        }
+
+        await fetchSuppliers();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t.saveError);
       }
-
-      await fetchSuppliers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.saveError);
-    }
-  }, [apiUrl, fetchSuppliers, getAuthHeaders, t.saveError]);
+    },
+    [apiUrl, fetchSuppliers, getAuthHeaders, t.saveError]
+  );
 
   const inputClasses = `w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none ${
-    theme === 'dark'
-      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
-      : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
+    theme === "dark"
+      ? "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
+      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
   }`;
 
-  const labelClasses = 'mb-2 block text-sm font-medium text-[var(--foreground)]';
+  const labelClasses = "mb-2 block text-sm font-medium text-[var(--foreground)]";
 
   const buttonPrimaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold text-white transition-all ${
     isSubmitting
-      ? 'cursor-not-allowed bg-[color:var(--action)]/45'
-      : 'bg-[var(--action)] shadow-[0_14px_28px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)]'
+      ? "cursor-not-allowed bg-[color:var(--action)]/45"
+      : "bg-[var(--action)] shadow-[0_14px_28px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)]"
   }`;
 
   const buttonSecondaryClasses = `rounded-[var(--radius-md)] border px-4 py-3 font-semibold transition-all ${
-    theme === 'dark'
-      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-strong)]'
-      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]'
+    theme === "dark"
+      ? "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-strong)]"
+      : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]"
   }`;
 
-  const buttonDangerClasses = 'rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 font-semibold text-white transition-all hover:opacity-90';
+  const buttonDangerClasses =
+    "rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 font-semibold text-white transition-all hover:opacity-90";
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
+    <div dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">
@@ -380,7 +382,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
           />
           <svg
             className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted)] ${
-              isRTL ? 'right-3' : 'left-3'
+              isRTL ? "right-3" : "left-3"
             }`}
             fill="none"
             stroke="currentColor"
@@ -407,8 +409,19 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
       {isLoading ? (
         <div className="py-12 text-center text-[var(--muted)]">
           <svg className="animate-spin h-8 w-8 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
           Loading...
         </div>
@@ -422,16 +435,16 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
             <div
               key={supplier.id}
               className={`rounded-[var(--radius-xl)] border p-5 transition-all ${
-                theme === 'dark'
-                  ? 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_30%,var(--border)_70%)]'
-                  : 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_34%,var(--border)_66%)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]'
-              } ${!supplier.is_active ? 'opacity-60' : ''}`}
+                theme === "dark"
+                  ? "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_30%,var(--border)_70%)]"
+                  : "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_34%,var(--border)_66%)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+              } ${!supplier.is_active ? "opacity-60" : ""}`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="truncate text-lg font-semibold text-[var(--foreground)]">
-                      {locale === 'ar' ? supplier.name_ar : supplier.name_en}
+                      {locale === "ar" ? supplier.name_ar : supplier.name_en}
                     </h3>
                     {!supplier.is_active && (
                       <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[var(--muted)]">
@@ -441,9 +454,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                   </div>
                   <div className="space-y-1 text-sm text-[var(--muted)]">
                     {(supplier.contact_name_en || supplier.contact_name_ar) && (
-                      <p>
-                        {locale === 'ar' ? supplier.contact_name_ar : supplier.contact_name_en}
-                      </p>
+                      <p>{locale === "ar" ? supplier.contact_name_ar : supplier.contact_name_en}</p>
                     )}
                     {supplier.phone && <p>{supplier.phone}</p>}
                     {supplier.email && <p>{supplier.email}</p>}
@@ -454,12 +465,12 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                     onClick={() => handleToggleActive(supplier)}
                     className={`rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium transition-all ${
                       supplier.is_active
-                        ? theme === 'dark'
-                          ? 'bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90'
-                          : 'bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90'
-                        : theme === 'dark'
-                        ? 'bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90'
-                        : 'bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90'
+                        ? theme === "dark"
+                          ? "bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90"
+                          : "bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90"
+                        : theme === "dark"
+                          ? "bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90"
+                          : "bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90"
                     }`}
                   >
                     {supplier.is_active ? t.deactivateButton : t.activateButton}
@@ -470,7 +481,12 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                     aria-label={t.editButton}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
                     </svg>
                   </button>
                   <button
@@ -479,7 +495,12 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                     aria-label={t.deleteButton}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -506,11 +527,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleSubmit}
-              className={buttonPrimaryClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleSubmit} className={buttonPrimaryClasses} disabled={isSubmitting}>
               {isSubmitting ? t.savingButton : t.saveButton}
             </button>
           </>
@@ -524,10 +541,10 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                 type="text"
                 value={formData.name_en}
                 onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-                className={`${inputClasses} ${formErrors.name_en ? 'border-red-500' : ''}`}
+                className={`${inputClasses} ${formErrors.name_en ? "border-red-500" : ""}`}
               />
               {formErrors.name_en && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.name_en}</p>
+                <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_en}</p>
               )}
             </div>
             <div>
@@ -536,11 +553,11 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                 type="text"
                 value={formData.name_ar}
                 onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                className={`${inputClasses} ${formErrors.name_ar ? 'border-red-500' : ''}`}
+                className={`${inputClasses} ${formErrors.name_ar ? "border-red-500" : ""}`}
                 dir="rtl"
               />
               {formErrors.name_ar && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.name_ar}</p>
+                <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_ar}</p>
               )}
             </div>
           </div>
@@ -572,10 +589,10 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`${inputClasses} ${formErrors.email ? 'border-red-500' : ''}`}
+                className={`${inputClasses} ${formErrors.email ? "border-red-500" : ""}`}
               />
               {formErrors.email && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.email}</p>
               )}
             </div>
             <div>
@@ -639,11 +656,7 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleSubmit}
-              className={buttonPrimaryClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleSubmit} className={buttonPrimaryClasses} disabled={isSubmitting}>
               {isSubmitting ? t.savingButton : t.saveButton}
             </button>
           </>
@@ -657,10 +670,10 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                 type="text"
                 value={formData.name_en}
                 onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-                className={`${inputClasses} ${formErrors.name_en ? 'border-red-500' : ''}`}
+                className={`${inputClasses} ${formErrors.name_en ? "border-red-500" : ""}`}
               />
               {formErrors.name_en && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.name_en}</p>
+                <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_en}</p>
               )}
             </div>
             <div>
@@ -669,11 +682,11 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                 type="text"
                 value={formData.name_ar}
                 onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                className={`${inputClasses} ${formErrors.name_ar ? 'border-red-500' : ''}`}
+                className={`${inputClasses} ${formErrors.name_ar ? "border-red-500" : ""}`}
                 dir="rtl"
               />
               {formErrors.name_ar && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.name_ar}</p>
+                <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_ar}</p>
               )}
             </div>
           </div>
@@ -705,10 +718,10 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`${inputClasses} ${formErrors.email ? 'border-red-500' : ''}`}
+                className={`${inputClasses} ${formErrors.email ? "border-red-500" : ""}`}
               />
               {formErrors.email && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.email}</p>
               )}
             </div>
             <div>
@@ -771,24 +784,16 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleDelete}
-              className={buttonDangerClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleDelete} className={buttonDangerClasses} disabled={isSubmitting}>
               {isSubmitting ? t.deleteLoading : t.deleteButton}
             </button>
           </>
         }
       >
-        <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-          {t.deleteConfirm}
-        </p>
+        <p className="text-[var(--foreground)]">{t.deleteConfirm}</p>
         {selectedSupplier && (
-          <p className={`mt-4 font-medium ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            {locale === 'ar' ? selectedSupplier.name_ar : selectedSupplier.name_en}
+          <p className={`mt-4 font-medium ${"text-[var(--foreground)]"}`}>
+            {locale === "ar" ? selectedSupplier.name_ar : selectedSupplier.name_en}
           </p>
         )}
       </Modal>
@@ -797,4 +802,3 @@ export const SupplierManager: React.FC<SupplierManagerProps> = ({
 };
 
 export default SupplierManager;
-

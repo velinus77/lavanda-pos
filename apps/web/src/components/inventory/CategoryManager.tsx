@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Modal from '../ui/Modal';
-import { getAuthToken } from '@/lib/auth';
+import React, { useState, useEffect, useCallback } from "react";
+import Modal from "../ui/Modal";
+import { getAuthToken } from "@/lib/auth";
 
 interface Category {
   id: number;
@@ -43,79 +43,79 @@ interface Translations {
   deleteError: string;
 }
 
-const translations: Record<'ar' | 'en', Translations> = {
+const translations: Record<"ar" | "en", Translations> = {
   en: {
-    title: 'Categories',
-    searchPlaceholder: 'Search categories...',
-    addButton: 'Add Category',
-    editButton: 'Edit',
-    deleteButton: 'Delete',
-    deactivateButton: 'Deactivate',
-    activateButton: 'Activate',
-    noCategories: 'No categories found',
-    addModalTitle: 'Add New Category',
-    editModalTitle: 'Edit Category',
-    deleteModalTitle: 'Delete Category',
-    nameEnLabel: 'Name (English)',
-    nameArLabel: 'Name (Arabic)',
-    descriptionEnLabel: 'Description (English)',
-    descriptionArLabel: 'Description (Arabic)',
-    isActiveLabel: 'Active',
-    saveButton: 'Save',
-    savingButton: 'Saving...',
-    cancelButton: 'Cancel',
-    deleteConfirm: 'Are you sure you want to delete this category? This action cannot be undone.',
-    deleteLoading: 'Deleting...',
-    errorRequired: 'This field is required',
-    fetchError: 'Failed to load categories',
-    saveError: 'Failed to save category',
-    deleteError: 'Failed to delete category',
+    title: "Categories",
+    searchPlaceholder: "Search categories...",
+    addButton: "Add Category",
+    editButton: "Edit",
+    deleteButton: "Delete",
+    deactivateButton: "Deactivate",
+    activateButton: "Activate",
+    noCategories: "No categories found",
+    addModalTitle: "Add New Category",
+    editModalTitle: "Edit Category",
+    deleteModalTitle: "Delete Category",
+    nameEnLabel: "Name (English)",
+    nameArLabel: "Name (Arabic)",
+    descriptionEnLabel: "Description (English)",
+    descriptionArLabel: "Description (Arabic)",
+    isActiveLabel: "Active",
+    saveButton: "Save",
+    savingButton: "Saving...",
+    cancelButton: "Cancel",
+    deleteConfirm: "Are you sure you want to delete this category? This action cannot be undone.",
+    deleteLoading: "Deleting...",
+    errorRequired: "This field is required",
+    fetchError: "Failed to load categories",
+    saveError: "Failed to save category",
+    deleteError: "Failed to delete category",
   },
   ar: {
-    title: 'التصنيفات',
-    searchPlaceholder: 'البحث عن التصنيفات...',
-    addButton: 'إضافة تصنيف',
-    editButton: 'تعديل',
-    deleteButton: 'حذف',
-    deactivateButton: 'إلغاء التفعيل',
-    activateButton: 'تفعيل',
-    noCategories: 'لا توجد تصنيفات',
-    addModalTitle: 'إضافة تصنيف جديد',
-    editModalTitle: 'تعديل التصنيف',
-    deleteModalTitle: 'حذف التصنيف',
-    nameEnLabel: 'الاسم (إنجليزي)',
-    nameArLabel: 'الاسم (عربي)',
-    descriptionEnLabel: 'الوصف (إنجليزي)',
-    descriptionArLabel: 'الوصف (عربي)',
-    isActiveLabel: 'نشط',
-    saveButton: 'حفظ',
-    savingButton: 'جاري الحفظ...',
-    cancelButton: 'إلغاء',
-    deleteConfirm: 'هل أنت متأكد من حذف هذا التصنيف؟ لا يمكن التراجع عن هذا الإجراء.',
-    deleteLoading: 'جاري الحذف...',
-    errorRequired: 'هذا الحقل مطلوب',
-    fetchError: 'فشل تحميل التصنيفات',
-    saveError: 'فشل حفظ التصنيف',
-    deleteError: 'فشل حذف التصنيف',
+    title: "التصنيفات",
+    searchPlaceholder: "دوّر على تصنيف...",
+    addButton: "ضيف تصنيف",
+    editButton: "تعديل",
+    deleteButton: "حذف",
+    deactivateButton: "وقفه",
+    activateButton: "فعّله",
+    noCategories: "مفيش تصنيفات",
+    addModalTitle: "ضيف تصنيف جديد",
+    editModalTitle: "تعديل التصنيف",
+    deleteModalTitle: "حذف التصنيف",
+    nameEnLabel: "الاسم (إنجليزي)",
+    nameArLabel: "الاسم (عربي)",
+    descriptionEnLabel: "الوصف (إنجليزي)",
+    descriptionArLabel: "الوصف (عربي)",
+    isActiveLabel: "نشط",
+    saveButton: "احفظ",
+    savingButton: "بنحفظ...",
+    cancelButton: "إلغاء",
+    deleteConfirm: "متأكد إنك عايز تمسح التصنيف ده؟ مش هتقدر ترجّعه بعد كده.",
+    deleteLoading: "بنحذف...",
+    errorRequired: "الخانة دي مطلوبة",
+    fetchError: "ماقدرناش نحمل التصنيفات",
+    saveError: "ماقدرناش نحفظ التصنيف",
+    deleteError: "ماقدرناش نمسح التصنيف",
   },
 };
 
 export interface CategoryManagerProps {
-  locale?: 'ar' | 'en';
-  theme?: 'light' | 'dark';
+  locale?: "ar" | "en";
+  theme?: "light" | "dark";
   apiUrl?: string;
 }
 
 export const CategoryManager: React.FC<CategoryManagerProps> = ({
-  locale = 'en',
-  theme = 'light',
-  apiUrl = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/categories`,
+  locale = "en",
+  theme = "light",
+  apiUrl = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/api/categories`,
 }) => {
   const t = translations[locale];
-  const isRTL = locale === 'ar';
+  const isRTL = locale === "ar";
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -127,10 +127,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 
   // Form states
   const [formData, setFormData] = useState({
-    name_en: '',
-    name_ar: '',
-    description_en: '',
-    description_ar: '',
+    name_en: "",
+    name_ar: "",
+    description_en: "",
+    description_ar: "",
     is_active: true,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -139,7 +139,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
   const getAuthHeaders = useCallback(() => {
     const token = getAuthToken();
     return {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   }, []);
@@ -151,13 +151,13 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
       const response = await fetch(apiUrl, {
         headers: getAuthHeaders(),
       });
-      
+
       if (!response.ok) {
         throw new Error(t.fetchError);
       }
-      
+
       const data = await response.json();
-      setCategories(Array.isArray(data) ? data : data.categories ?? []);
+      setCategories(Array.isArray(data) ? data : (data.categories ?? []));
     } catch (err) {
       setError(err instanceof Error ? err.message : t.fetchError);
     } finally {
@@ -181,10 +181,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 
   const openAddModal = () => {
     setFormData({
-      name_en: '',
-      name_ar: '',
-      description_en: '',
-      description_ar: '',
+      name_en: "",
+      name_ar: "",
+      description_en: "",
+      description_ar: "",
       is_active: true,
     });
     setFormErrors({});
@@ -196,8 +196,8 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
     setFormData({
       name_en: category.name_en,
       name_ar: category.name_ar,
-      description_en: category.description_en || '',
-      description_ar: category.description_ar || '',
+      description_en: category.description_en || "",
+      description_ar: category.description_ar || "",
       is_active: category.is_active,
     });
     setFormErrors({});
@@ -222,10 +222,8 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 
     setIsSubmitting(true);
     try {
-      const url = selectedCategory
-        ? `${apiUrl}/${selectedCategory.id}`
-        : apiUrl;
-      const method = selectedCategory ? 'PUT' : 'POST';
+      const url = selectedCategory ? `${apiUrl}/${selectedCategory.id}` : apiUrl;
+      const method = selectedCategory ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
@@ -254,7 +252,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
     setIsSubmitting(true);
     try {
       const response = await fetch(`${apiUrl}/${selectedCategory.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: getAuthHeaders(),
       });
 
@@ -272,52 +270,56 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
     }
   }, [apiUrl, fetchCategories, getAuthHeaders, selectedCategory, t.deleteError]);
 
-  const handleToggleActive = useCallback(async (category: Category) => {
-    try {
-      const response = await fetch(`${apiUrl}/${category.id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          is_active: !category.is_active,
-        }),
-      });
+  const handleToggleActive = useCallback(
+    async (category: Category) => {
+      try {
+        const response = await fetch(`${apiUrl}/${category.id}`, {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            is_active: !category.is_active,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(t.saveError);
+        if (!response.ok) {
+          throw new Error(t.saveError);
+        }
+
+        await fetchCategories();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t.saveError);
       }
-
-      await fetchCategories();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t.saveError);
-    }
-  }, [apiUrl, fetchCategories, getAuthHeaders, t.saveError]);
+    },
+    [apiUrl, fetchCategories, getAuthHeaders, t.saveError]
+  );
 
   const inputClasses = `w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none ${
-    theme === 'dark'
-      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
-      : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
+    theme === "dark"
+      ? "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
+      : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15"
   }`;
 
   const labelClasses = `mb-2 block text-sm font-medium ${
-    theme === 'dark' ? 'text-[var(--foreground)]' : 'text-[var(--foreground)]'
+    theme === "dark" ? "text-[var(--foreground)]" : "text-[var(--foreground)]"
   }`;
 
   const buttonPrimaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold text-white transition-all ${
     isSubmitting
-      ? 'cursor-not-allowed bg-[color:var(--action)]/45'
-      : 'bg-[var(--action)] shadow-[0_14px_28px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)]'
+      ? "cursor-not-allowed bg-[color:var(--action)]/45"
+      : "bg-[var(--action)] shadow-[0_14px_28px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)]"
   }`;
 
   const buttonSecondaryClasses = `rounded-[var(--radius-md)] border px-4 py-3 font-semibold transition-all ${
-    theme === 'dark'
-      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-strong)]'
-      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]'
+    theme === "dark"
+      ? "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-strong)]"
+      : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]"
   }`;
 
-  const buttonDangerClasses = 'rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 font-semibold text-white transition-all hover:opacity-90';
+  const buttonDangerClasses =
+    "rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 font-semibold text-white transition-all hover:opacity-90";
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
+    <div dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">
@@ -346,7 +348,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
           />
           <svg
             className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted)] ${
-              isRTL ? 'right-3' : 'left-3'
+              isRTL ? "right-3" : "left-3"
             }`}
             fill="none"
             stroke="currentColor"
@@ -373,8 +375,19 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
       {isLoading ? (
         <div className="py-12 text-center text-[var(--muted)]">
           <svg className="animate-spin h-8 w-8 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
           Loading...
         </div>
@@ -388,25 +401,25 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             <div
               key={category.id}
               className={`rounded-[var(--radius-xl)] border p-5 transition-all ${
-                theme === 'dark'
-                  ? 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_30%,var(--border)_70%)]'
-                  : 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_34%,var(--border)_66%)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]'
-              } ${!category.is_active ? 'opacity-60' : ''}`}
+                theme === "dark"
+                  ? "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_30%,var(--border)_70%)]"
+                  : "border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_34%,var(--border)_66%)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+              } ${!category.is_active ? "opacity-60" : ""}`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="truncate text-lg font-semibold text-[var(--foreground)]">
-                      {locale === 'ar' ? category.name_ar : category.name_en}
+                      {locale === "ar" ? category.name_ar : category.name_en}
                     </h3>
                     {!category.is_active && (
                       <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-xs text-[var(--muted)]">
-                        {theme === 'dark' ? 'Inactive' : 'Inactive'}
+                        {theme === "dark" ? "Inactive" : "Inactive"}
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-[var(--muted)]">
-                    {locale === 'ar' ? category.description_ar : category.description_en}
+                    {locale === "ar" ? category.description_ar : category.description_en}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -414,12 +427,12 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
                     onClick={() => handleToggleActive(category)}
                     className={`rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium transition-all ${
                       category.is_active
-                        ? theme === 'dark'
-                          ? 'bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90'
-                          : 'bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90'
-                        : theme === 'dark'
-                        ? 'bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90'
-                        : 'bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90'
+                        ? theme === "dark"
+                          ? "bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90"
+                          : "bg-[var(--warning-soft)] text-[var(--warning)] hover:opacity-90"
+                        : theme === "dark"
+                          ? "bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90"
+                          : "bg-[var(--action-soft)] text-[var(--action)] hover:opacity-90"
                     }`}
                   >
                     {category.is_active ? t.deactivateButton : t.activateButton}
@@ -430,7 +443,12 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
                     aria-label={t.editButton}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
                     </svg>
                   </button>
                   <button
@@ -439,7 +457,12 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
                     aria-label={t.deleteButton}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -466,11 +489,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleSubmit}
-              className={buttonPrimaryClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleSubmit} className={buttonPrimaryClasses} disabled={isSubmitting}>
               {isSubmitting ? t.savingButton : t.saveButton}
             </button>
           </>
@@ -483,11 +502,11 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
               type="text"
               value={formData.name_en}
               onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-              className={`${inputClasses} ${formErrors.name_en ? 'border-red-500' : ''}`}
-              placeholder={locale === 'ar' ? 'Name in English' : 'اسم بالإنجليزية'}
+              className={`${inputClasses} ${formErrors.name_en ? "border-red-500" : ""}`}
+              placeholder={locale === "ar" ? "Name in English" : "اسم بالإنجليزية"}
             />
             {formErrors.name_en && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.name_en}</p>
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_en}</p>
             )}
           </div>
           <div>
@@ -496,12 +515,12 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
               type="text"
               value={formData.name_ar}
               onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-              className={`${inputClasses} ${formErrors.name_ar ? 'border-red-500' : ''}`}
-              placeholder={locale === 'ar' ? 'اسم بالعربية' : 'Name in Arabic'}
+              className={`${inputClasses} ${formErrors.name_ar ? "border-red-500" : ""}`}
+              placeholder={locale === "ar" ? "اسم بالعربية" : "Name in Arabic"}
               dir="rtl"
             />
             {formErrors.name_ar && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.name_ar}</p>
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_ar}</p>
             )}
           </div>
           <div>
@@ -511,7 +530,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
               onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
               className={inputClasses}
               rows={3}
-              placeholder={locale === 'ar' ? 'Description in English (optional)' : 'وصف بالإنجليزية (اختياري)'}
+              placeholder={
+                locale === "ar" ? "Description in English (optional)" : "وصف بالإنجليزية (اختياري)"
+              }
             />
           </div>
           <div>
@@ -521,7 +542,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
               onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
               className={inputClasses}
               rows={3}
-              placeholder={locale === 'ar' ? 'وصف بالعربية (اختياري)' : 'Description in Arabic (optional)'}
+              placeholder={
+                locale === "ar" ? "وصف بالعربية (اختياري)" : "Description in Arabic (optional)"
+              }
               dir="rtl"
             />
           </div>
@@ -557,11 +580,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleSubmit}
-              className={buttonPrimaryClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleSubmit} className={buttonPrimaryClasses} disabled={isSubmitting}>
               {isSubmitting ? t.savingButton : t.saveButton}
             </button>
           </>
@@ -574,10 +593,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
               type="text"
               value={formData.name_en}
               onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-              className={`${inputClasses} ${formErrors.name_en ? 'border-red-500' : ''}`}
+              className={`${inputClasses} ${formErrors.name_en ? "border-red-500" : ""}`}
             />
             {formErrors.name_en && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.name_en}</p>
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_en}</p>
             )}
           </div>
           <div>
@@ -586,11 +605,11 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
               type="text"
               value={formData.name_ar}
               onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-              className={`${inputClasses} ${formErrors.name_ar ? 'border-red-500' : ''}`}
+              className={`${inputClasses} ${formErrors.name_ar ? "border-red-500" : ""}`}
               dir="rtl"
             />
             {formErrors.name_ar && (
-              <p className="mt-1 text-sm text-red-500">{formErrors.name_ar}</p>
+              <p className="mt-1 text-sm text-[var(--danger)]">{formErrors.name_ar}</p>
             )}
           </div>
           <div>
@@ -643,22 +662,16 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             >
               {t.cancelButton}
             </button>
-            <button
-              onClick={handleDelete}
-              className={buttonDangerClasses}
-              disabled={isSubmitting}
-            >
+            <button onClick={handleDelete} className={buttonDangerClasses} disabled={isSubmitting}>
               {isSubmitting ? t.deleteLoading : t.deleteButton}
             </button>
           </>
         }
       >
-        <p className="text-[var(--muted)]">
-          {t.deleteConfirm}
-        </p>
+        <p className="text-[var(--muted)]">{t.deleteConfirm}</p>
         {selectedCategory && (
           <p className="mt-4 font-medium text-[var(--foreground)]">
-            {locale === 'ar' ? selectedCategory.name_ar : selectedCategory.name_en}
+            {locale === "ar" ? selectedCategory.name_ar : selectedCategory.name_en}
           </p>
         )}
       </Modal>
@@ -667,4 +680,3 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 };
 
 export default CategoryManager;
-
