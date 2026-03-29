@@ -1,44 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCachedUser } from '@/lib/auth';
+import React from 'react';
+import dynamic from 'next/dynamic';
 import { useLocale } from '@/contexts/LocaleProvider';
 import { useTheme } from '@/contexts/ThemeProvider';
-import CategoryManager from '@/components/inventory/CategoryManager';
+import { useDashboardAccess } from '@/lib/use-dashboard-access';
+
+const CategoryManager = dynamic(() => import('@/components/inventory/CategoryManager'), {
+  loading: () => <div className="lav-data-shell min-h-[360px] animate-pulse" />,
+});
 
 export default function CategoriesPage() {
-  const router = useRouter();
   const { locale } = useLocale();
   const { theme } = useTheme();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isReady } = useDashboardAccess({ allowedRoles: ['admin', 'manager'] });
 
-  useEffect(() => {
-    const cachedUser = getCachedUser();
-    if (cachedUser) {
-      if (cachedUser.role === 'cashier') {
-        router.replace('/dashboard');
-        return;
-      }
-      setIsAuthorized(true);
-    } else {
-      router.replace('/login');
-      return;
-    }
-
-    setIsLoading(false);
-  }, [router]);
-
-  if (isLoading || !isAuthorized) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
-          <p className="text-[var(--muted)]">{locale === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}</p>
-        </div>
-      </div>
-    );
+  if (!isReady) {
+    return null;
   }
 
   const titles =

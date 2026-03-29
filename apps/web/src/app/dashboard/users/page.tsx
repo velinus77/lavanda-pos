@@ -1,54 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { UserManager } from '@/components/admin/UserManager';
-import { getCachedUser } from '@/lib/auth';
+import React from 'react';
+import dynamic from 'next/dynamic';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { useLocale } from '@/contexts/LocaleProvider';
+import { useDashboardAccess } from '@/lib/use-dashboard-access';
+
+const UserManager = dynamic(
+  () => import('@/components/admin/UserManager').then((mod) => mod.UserManager),
+  {
+    loading: () => <div className="lav-data-shell min-h-[360px] animate-pulse" />,
+  }
+);
 
 export default function UsersPage() {
-  const router = useRouter();
   const { theme } = useTheme();
   const { locale } = useLocale();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isReady } = useDashboardAccess({ allowedRoles: ['admin'] });
 
-  useEffect(() => {
-    const checkAuthorization = () => {
-      const user = getCachedUser();
-
-      if (!user) {
-        router.replace('/login');
-        return;
-      }
-
-      if (user.role !== 'admin') {
-        router.replace('/dashboard');
-        return;
-      }
-
-      setIsAuthorized(true);
-      setIsLoading(false);
-    };
-
-    checkAuthorization();
-  }, [router]);
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
-          <p className={`text-sm ${theme === 'dark' ? 'text-[var(--muted)]' : 'text-[var(--muted)]'}`}>
-            {locale === 'ar' ? 'جارٍ التحميل...' : 'Loading...'}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthorized) {
+  if (!isReady) {
     return null;
   }
 

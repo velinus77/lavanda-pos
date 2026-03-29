@@ -1,68 +1,42 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { SettingsManager } from "@/components/admin/SettingsManager";
-import { getCachedUser } from "@/lib/auth";
-import { useTheme } from "@/contexts/ThemeProvider";
-import { useLocale } from "@/contexts/LocaleProvider";
+import React from 'react';
+import dynamic from 'next/dynamic';
+import { useTheme } from '@/contexts/ThemeProvider';
+import { useLocale } from '@/contexts/LocaleProvider';
+import { useDashboardAccess } from '@/lib/use-dashboard-access';
+
+const SettingsManager = dynamic(
+  () => import('@/components/admin/SettingsManager').then((mod) => mod.SettingsManager),
+  {
+    loading: () => <div className="lav-data-shell min-h-[360px] animate-pulse" />,
+  }
+);
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { theme } = useTheme();
   const { locale } = useLocale();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isReady } = useDashboardAccess({ allowedRoles: ['admin'] });
 
-  useEffect(() => {
-    const user = getCachedUser();
-
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
-
-    if (user.role !== "admin") {
-      router.replace("/dashboard");
-      return;
-    }
-
-    setIsAuthorized(true);
-    setIsLoading(false);
-  }, [router]);
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
-          <p className="text-sm text-[var(--muted)]">
-            {locale === "ar" ? "جاري التحميل..." : "Loading..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthorized) {
+  if (!isReady) {
     return null;
   }
 
   const t =
-    locale === "ar"
+    locale === 'ar'
       ? {
-          home: "الرئيسية",
-          overline: "تشغيل النظام",
-          title: "الإعدادات",
+          home: 'الرئيسية',
+          overline: 'تشغيل النظام',
+          title: 'الإعدادات',
           subtitle:
-            "اضبط تفضيلات الصيدلية واللغة والضرائب وقواعد المخزون من مساحة تشغيل أوضح وأكثر هدوءًا.",
+            'اضبط تفضيلات الصيدلية واللغة والضرائب وقواعد المخزون من مساحة تشغيل أوضح وأكثر هدوءًا.',
         }
       : {
-          home: "Home",
-          overline: "System operations",
-          title: "Settings",
+          home: 'Home',
+          overline: 'System operations',
+          title: 'Settings',
           subtitle:
-            "Manage pharmacy preferences, localization, tax defaults, and inventory rules from one calmer control surface.",
+            'Manage pharmacy preferences, localization, tax defaults, and inventory rules from one calmer control surface.',
         };
 
   return (

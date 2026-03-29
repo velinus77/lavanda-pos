@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { User } from '@/lib/auth';
 import { useLocale } from '@/contexts/LocaleProvider';
 
@@ -140,11 +140,21 @@ const copy = {
 
 export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { locale } = useLocale();
   const isRTL = locale === 'ar';
   const t = copy[locale];
 
-  const visibleItems = navItems.filter((item) => item.allowedRoles.includes(user.role));
+  const visibleItems = useMemo(
+    () => navItems.filter((item) => item.allowedRoles.includes(user.role)),
+    [user.role]
+  );
+
+  useEffect(() => {
+    visibleItems.forEach((item) => {
+      void router.prefetch(item.href);
+    });
+  }, [router, visibleItems]);
 
   const sidebarClasses = `
     fixed inset-y-0 z-50 w-72 overflow-hidden border-r border-white/5 bg-[#09111d] text-[var(--sidebar-foreground)]

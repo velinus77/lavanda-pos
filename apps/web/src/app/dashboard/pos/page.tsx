@@ -1,9 +1,9 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { authenticatedFetch, getCachedUser, getTokenForRequest } from "@/lib/auth";
+import { authenticatedFetch, getTokenForRequest } from "@/lib/auth";
 import { useLocale } from "@/contexts/LocaleProvider";
+import { useDashboardAccess } from "@/lib/use-dashboard-access";
 
 interface Product {
   id: string;
@@ -211,9 +211,9 @@ async function postCheckout(
 }
 
 export default function POSPage() {
-  const router = useRouter();
   const { locale } = useLocale();
   const isRTL = locale === "ar";
+  const { isReady } = useDashboardAccess();
   const copy = locale === "ar"
     ? {
         title: "???????",
@@ -286,7 +286,6 @@ export default function POSPage() {
         manualRateValue: "Manual rate value",
       };
 
-  const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -464,15 +463,6 @@ export default function POSPage() {
     addProductToCart(product);
     return true;
   }, [addProductToCart]);
-
-  useEffect(() => {
-    const cachedUser = getCachedUser();
-    if (!cachedUser) {
-      router.replace("/login");
-      return;
-    }
-    setIsLoading(false);
-  }, [router]);
 
   useEffect(() => {
     focusSearch();
@@ -709,9 +699,7 @@ export default function POSPage() {
     window.open(blobUrl, "_blank", "noopener,noreferrer");
   }, [locale, receipt]);
 
-  if (isLoading) {
-    return <div className="px-6 py-10 text-sm text-slate-400">Loading POS...</div>;
-  }
+  if (!isReady) return null;
 
   return (
     <div className="space-y-6 pb-10" dir={isRTL ? "rtl" : "ltr"}>

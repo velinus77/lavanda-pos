@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { authenticatedFetch, getCachedUser, getTokenForRequest } from "@/lib/auth";
+import { authenticatedFetch, getTokenForRequest } from "@/lib/auth";
 import { useLocale } from "@/contexts/LocaleProvider";
+import { useDashboardAccess } from "@/lib/use-dashboard-access";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -116,11 +116,9 @@ async function fetchSalesAnalytics(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SalesPage() {
-  const router = useRouter();
   const { locale } = useLocale();
   const isRTL = locale === "ar";
-
-  const [isLoading, setIsLoading] = useState(true);
+  const { isReady } = useDashboardAccess({ allowedRoles: ["admin", "manager"] });
 
   // Table state
   const [sales, setSales] = useState<Sale[]>([]);
@@ -138,20 +136,6 @@ export default function SalesPage() {
   // Receipt preview
   const [previewReceiptId, setPreviewReceiptId] = useState<string | null>(null);
   const [receiptBlobUrl, setReceiptBlobUrl] = useState<string | null>(null);
-
-  // ── Auth ──
-  useEffect(() => {
-    const cachedUser = getCachedUser();
-    if (!cachedUser) {
-      router.replace("/login");
-      return;
-    }
-    if (cachedUser.role === "cashier") {
-      router.replace("/dashboard");
-      return;
-    }
-    setIsLoading(false);
-  }, [router]);
 
   // ── Fetch receipt blob URL whenever previewReceiptId changes ──
   useEffect(() => {
@@ -213,8 +197,8 @@ export default function SalesPage() {
   );
 
   useEffect(() => {
-    if (!isLoading) loadSales(page);
-  }, [isLoading, page, loadSales]);
+    if (isReady) loadSales(page);
+  }, [isReady, page, loadSales]);
 
   const handleFilter = () => {
     setPage(1);
@@ -235,13 +219,7 @@ export default function SalesPage() {
 
   // ─────────────────────────────────────────────────────────────────────────────
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
-      </div>
-    );
-  }
+  if (!isReady) return null;
 
   const t = {
     title: isRTL

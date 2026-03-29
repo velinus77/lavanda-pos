@@ -1,51 +1,27 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCachedUser } from '@/lib/auth';
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useLocale } from '@/contexts/LocaleProvider';
 import { useTheme } from '@/contexts/ThemeProvider';
-import StockAdjustment from '@/components/inventory/StockAdjustment';
-import ExpiryMonitor from '@/components/inventory/ExpiryMonitor';
+import { useDashboardAccess } from '@/lib/use-dashboard-access';
+
+const StockAdjustment = dynamic(() => import('@/components/inventory/StockAdjustment'), {
+  loading: () => <div className="lav-data-shell min-h-[420px] animate-pulse" />,
+});
+
+const ExpiryMonitor = dynamic(() => import('@/components/inventory/ExpiryMonitor'), {
+  loading: () => <div className="lav-data-shell min-h-[420px] animate-pulse" />,
+});
 
 export default function StockPage() {
-  const router = useRouter();
   const { locale } = useLocale();
   const { theme } = useTheme();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isReady } = useDashboardAccess({ allowedRoles: ['admin', 'manager'] });
   const [activeTab, setActiveTab] = useState<'adjustment' | 'expiry'>('adjustment');
 
-  const isRTL = locale === 'ar';
-
-  useEffect(() => {
-    const cachedUser = getCachedUser();
-
-    if (cachedUser) {
-      if (cachedUser.role === 'cashier') {
-        setIsLoading(false);
-        router.replace('/dashboard');
-        return;
-      }
-
-      setIsAuthorized(true);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(false);
-    router.replace('/login');
-  }, [router]);
-
-  if (isLoading || !isAuthorized) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
-          <p className="text-[var(--muted)]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
-        </div>
-      </div>
-    );
+  if (!isReady) {
+    return null;
   }
 
   const titles =
