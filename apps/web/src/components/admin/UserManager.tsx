@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
+import { getAuthToken } from '@/lib/auth';
 
 interface User {
   id: number;
@@ -180,11 +181,30 @@ const translations: Record<'ar' | 'en', Translations> = {
 };
 
 const ROLES: Array<'admin' | 'manager' | 'cashier'> = ['admin', 'manager', 'cashier'];
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/users`;
 
 interface UserManagerProps {
   locale?: 'ar' | 'en';
   theme?: 'light' | 'dark';
   accessToken?: string;
+}
+
+function normalizeUser(rawUser: Record<string, unknown>): User {
+  return {
+    id: Number(rawUser.id ?? 0),
+    full_name: String(rawUser.full_name ?? rawUser.fullName ?? rawUser.username ?? ''),
+    email: String(rawUser.email ?? ''),
+    role: (rawUser.role === 'admin' || rawUser.role === 'manager' || rawUser.role === 'cashier'
+      ? rawUser.role
+      : 'cashier'),
+    is_active: Boolean(rawUser.is_active ?? rawUser.isActive ?? true),
+    created_at: String(rawUser.created_at ?? rawUser.createdAt ?? ''),
+    last_login: typeof rawUser.last_login === 'string'
+      ? rawUser.last_login
+      : typeof rawUser.lastLogin === 'string'
+        ? rawUser.lastLogin
+        : undefined,
+  };
 }
 
 export const UserManager: React.FC<UserManagerProps> = ({
@@ -229,7 +249,12 @@ export const UserManager: React.FC<UserManagerProps> = ({
         ...(search && { search }),
       });
 
-      const response = await fetch(`/api/users?${params}`);
+      const token = accessToken ?? getAuthToken();
+      const response = await fetch(`${API_BASE}?${params}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       if (!response.ok) {
         if (response.status === 401) {
           setError('Authentication required');
@@ -239,9 +264,28 @@ export const UserManager: React.FC<UserManagerProps> = ({
       }
 
       const data = await response.json();
-      setUsers(data.users || []);
-      setTotalUsers(data.total || 0);
-      setTotalPages(data.total_pages || 1);
+      const normalizedUsers = Array.isArray(data.users)
+        ? data.users.map((user: Record<string, unknown>) => normalizeUser(user))
+        : [];
+
+      setUsers(normalizedUsers);
+
+      const total =
+        typeof data.total === 'number'
+          ? data.total
+          : typeof data.pagination?.total === 'number'
+            ? data.pagination.total
+            : normalizedUsers.length;
+
+      const totalPagesValue =
+        typeof data.total_pages === 'number'
+          ? data.total_pages
+          : typeof data.pagination?.totalPages === 'number'
+            ? data.pagination.totalPages
+            : Math.max(1, Math.ceil(total / usersPerPage));
+
+      setTotalUsers(total);
+      setTotalPages(totalPagesValue);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.error);
     } finally {
@@ -292,11 +336,12 @@ export const UserManager: React.FC<UserManagerProps> = ({
 
     setSubmitting(true);
     try {
-      const response = await fetch('/api/users', {
+      const token = accessToken ?? getAuthToken();
+      const response = await fetch(API_BASE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           full_name: formData.full_name,
@@ -336,11 +381,12 @@ export const UserManager: React.FC<UserManagerProps> = ({
         body.password = formData.password;
       }
 
-      const response = await fetch(`/api/users/${selectedUser.id}`, {
+      const token = accessToken ?? getAuthToken();
+      const response = await fetch(`${API_BASE}/${selectedUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(body),
       });
@@ -366,10 +412,11 @@ export const UserManager: React.FC<UserManagerProps> = ({
     if (!selectedUser) return;
 
     try {
-      const response = await fetch(`/api/users/${selectedUser.id}`, {
+      const token = accessToken ?? getAuthToken();
+      const response = await fetch(`${API_BASE}/${selectedUser.id}`, {
         method: 'DELETE',
         headers: {
-          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
 
@@ -405,11 +452,14 @@ export const UserManager: React.FC<UserManagerProps> = ({
     setIsDeactivateModalOpen(true);
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      user.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredUsers = users.filter((user) => {
+    const fullName = (user.full_name ?? '').toLowerCase();
+    const email = (user.email ?? '').toLowerCase();
+
+    return fullName.includes(normalizedSearch) || email.includes(normalizedSearch);
+  });
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
@@ -426,22 +476,18 @@ export const UserManager: React.FC<UserManagerProps> = ({
   };
 
   return (
-    <div className="p-6" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1
-          className={`text-2xl font-bold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}
-        >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">
           {t.usersManagement}
-        </h1>
+        </h2>
         <button
           onClick={() => {
             resetForm();
             setIsAddModalOpen(true);
           }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--action)] px-4 py-3 font-semibold text-white shadow-[0_14px_28px_rgba(31,157,115,0.22)] transition-all hover:bg-[var(--action-strong)]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -451,21 +497,21 @@ export const UserManager: React.FC<UserManagerProps> = ({
       </div>
 
       {/* Search */}
-      <div className="mb-6">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_76%,transparent)] p-4">
         <div className="relative">
           <input
             type="text"
             placeholder={t.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className={`w-full px-4 py-2 pr-10 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full rounded-[var(--radius-md)] border px-4 py-3 pr-10 outline-none transition-all focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15 ${
               theme === 'dark'
-                ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)]'
+                : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)]'
             } ${isRTL ? 'pr-4 pl-10' : 'pl-4 pr-10'}`}
           />
           <svg
-            className={`absolute top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 ${
+            className={`absolute top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--muted)] ${
               isRTL ? 'left-3' : 'right-3'
             }`}
             fill="none"
@@ -483,51 +529,33 @@ export const UserManager: React.FC<UserManagerProps> = ({
       </div>
 
       {/* Table */}
-      <div
-        className={`rounded-lg border overflow-hidden ${
-          theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-        }`}
-      >
+      <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
         {loading ? (
           <div className="p-8 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
-            <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{t.loading}</p>
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent"></div>
+            <p className="mt-2 text-[var(--muted)]">{t.loading}</p>
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-500">{error}</div>
+          <div className="p-8 text-center text-[var(--danger)]">{error}</div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className={theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}>
+                <thead className="bg-[color:color-mix(in_srgb,var(--surface)_90%,transparent)]">
                   <tr>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    }`}>{t.name}</th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    }`}>{t.email}</th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    }`}>{t.role}</th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    }`}>{t.status}</th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    }`}>{t.lastLogin}</th>
-                    <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                    }`}>{t.actions}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--muted)]">{t.name}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--muted)]">{t.email}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--muted)]">{t.role}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--muted)]">{t.status}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--muted)]">{t.lastLogin}</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--muted)]">{t.actions}</th>
                   </tr>
                 </thead>
-                <tbody className={`divide-y ${
-                  theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'
-                }`}>
+                <tbody className="divide-y divide-[var(--border)]">
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-8 text-center">
-                        <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>
+                        <span className="text-[var(--muted)]">
                           {t.loading}
                         </span>
                       </td>
@@ -536,23 +564,19 @@ export const UserManager: React.FC<UserManagerProps> = ({
                     filteredUsers.map((user) => (
                       <tr
                         key={user.id}
-                        className={theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}
+                        className="transition-colors hover:bg-[color:color-mix(in_srgb,var(--surface)_82%,transparent)]"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className={`font-medium ${
-                            theme === 'dark' ? 'text-white' : 'text-gray-900'
-                          }`}>{user.full_name}</div>
+                          <div className="font-medium text-[var(--foreground)]">{user.full_name}</div>
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap ${
-                          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                        }`}>{user.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[var(--muted)]">{user.email}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                             user.role === 'admin'
-                              ? 'bg-purple-100 text-purple-800'
+                              ? 'bg-[var(--warning-soft)] text-[var(--warning)]'
                               : user.role === 'manager'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
+                              ? 'bg-[var(--info-soft)] text-[var(--info)]'
+                              : 'bg-[var(--action-soft)] text-[var(--action)]'
                           }`}>
                             {roleLabels[locale][user.role] || user.role}
                           </span>
@@ -560,20 +584,18 @@ export const UserManager: React.FC<UserManagerProps> = ({
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                             user.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-[var(--action-soft)] text-[var(--action)]'
+                              : 'bg-[var(--danger-soft)] text-[var(--danger)]'
                           }`}>
                             {user.is_active ? t.active : t.inactive}
                           </span>
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap ${
-                          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                        }`}>{formatDate(user.last_login)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[var(--muted)]">{formatDate(user.last_login)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => openEditModal(user)}
-                              className="text-blue-600 hover:text-blue-800 font-medium"
+                              className="font-medium text-[var(--action)] hover:text-[var(--action-strong)]"
                             >
                               {t.edit}
                             </button>
@@ -581,8 +603,8 @@ export const UserManager: React.FC<UserManagerProps> = ({
                               onClick={() => openDeactivateModal(user)}
                               className={`font-medium ${
                                 user.is_active
-                                  ? 'text-red-600 hover:text-red-800'
-                                  : 'text-green-600 hover:text-green-800'
+                                  ? 'text-[var(--danger)] hover:opacity-80'
+                                  : 'text-[var(--action)] hover:opacity-80'
                               }`}
                             >
                               {user.is_active ? t.deactivate : t.activate}
@@ -598,22 +620,18 @@ export const UserManager: React.FC<UserManagerProps> = ({
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className={`px-6 py-4 flex items-center justify-between border-t ${
-                theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-              }`}>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
+              <div className="flex items-center justify-between border-t border-[var(--border)] px-6 py-4">
+                <p className="text-sm text-[var(--muted)]">
                   {t.showing} {Math.min((currentPage - 1) * usersPerPage + 1, totalUsers)} - {Math.min(currentPage * usersPerPage, totalUsers)} {t.of} {totalUsers} {t.users}
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
                       currentPage === 1
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]'
+                        : 'bg-[var(--action)] text-white hover:bg-[var(--action-strong)]'
                     }`}
                   >
                     {t.previous}
@@ -621,10 +639,10 @@ export const UserManager: React.FC<UserManagerProps> = ({
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
                       currentPage === totalPages
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]'
+                        : 'bg-[var(--action)] text-white hover:bg-[var(--action-strong)]'
                     }`}
                   >
                     {t.next}

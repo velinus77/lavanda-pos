@@ -56,7 +56,6 @@ export default function SalesPage() {
   const { locale } = useLocale();
   const isRTL = locale === 'ar';
 
-  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Table state
@@ -80,7 +79,6 @@ export default function SalesPage() {
     const cachedUser = getCachedUser();
     if (!cachedUser) { router.replace('/login'); return; }
     if (cachedUser.role === 'cashier') { router.replace('/dashboard'); return; }
-    setUser(cachedUser);
     setIsLoading(false);
   }, [router]);
 
@@ -184,26 +182,24 @@ export default function SalesPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Header */}
-      <div className="mb-6">
-        <nav className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-          <ol className="flex items-center space-x-2 rtl:space-x-reverse">
-            <li><a href="/dashboard" className="hover:text-gray-700 dark:hover:text-gray-300">{isRTL ? '\u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629' : 'Home'}</a></li>
-            <li className="flex items-center">
-              <svg className="w-4 h-4 mx-2 rtl:rotate-180" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
-              <span className="text-gray-900 dark:text-white font-medium">{t.title}</span>
-            </li>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="space-y-6">
+      <div className="rounded-[var(--radius-xl)] border border-[color:color-mix(in_srgb,var(--accent)_18%,transparent)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_10%,var(--card)_90%),color-mix(in_srgb,var(--surface)_86%,transparent))] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+        <nav className="mb-4 text-sm text-[var(--muted)]">
+          <ol className="flex items-center gap-2 rtl:flex-row-reverse">
+            <li><a href="/dashboard" className="transition-colors hover:text-[var(--foreground)]">{isRTL ? '\u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629' : 'Home'}</a></li>
+            <li className="text-[var(--accent)]">/</li>
+            <li className="font-medium text-[var(--foreground)]">{t.title}</li>
           </ol>
         </nav>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.title}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">{t.subtitle}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
+          {isRTL ? 'المعاملات اليومية' : 'Daily transactions'}
+        </p>
+        <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">{t.title}</h1>
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{t.subtitle}</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_76%,transparent)] p-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t.from}</label>
@@ -246,7 +242,7 @@ export default function SalesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
         {fetchError ? (
           <div className="flex items-center justify-center py-12">
             <p className="text-red-500 text-sm">{fetchError}</p>

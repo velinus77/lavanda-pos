@@ -709,44 +709,39 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
     return { label: t.stockOkBadge, color: 'green' };
   };
 
-  const inputClasses = `w-full px-4 py-2.5 rounded-lg border transition-all outline-none ${
+  const inputClasses = `w-full rounded-[var(--radius-md)] border px-4 py-3 transition-all outline-none ${
     theme === 'dark'
-      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
+      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
+      : 'border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15'
   }`;
 
-  const labelClasses = `block text-sm font-medium mb-2 ${
-    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-  }`;
+  const labelClasses = 'mb-2 block text-sm font-medium text-[var(--foreground)]';
 
-  const buttonPrimaryClasses = `px-4 py-2.5 rounded-lg font-semibold text-white transition-all ${
+  const buttonPrimaryClasses = `rounded-[var(--radius-md)] px-4 py-3 font-semibold text-white transition-all ${
     isSubmitting
-      ? 'bg-purple-400 cursor-not-allowed'
-      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
+      ? 'cursor-not-allowed bg-[color:var(--action)]/45'
+      : 'bg-[var(--action)] shadow-[0_14px_28px_rgba(31,157,115,0.22)] hover:bg-[var(--action-strong)]'
   }`;
 
-  const buttonSecondaryClasses = `px-4 py-2.5 rounded-lg font-semibold transition-all ${
+  const buttonSecondaryClasses = `rounded-[var(--radius-md)] border px-4 py-3 font-semibold transition-all ${
     theme === 'dark'
-      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      ? 'border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-strong)]'
+      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-strong)]'
   }`;
 
-  const buttonDangerClasses = `px-4 py-2.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition-all`;
+  const buttonDangerClasses = 'rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 font-semibold text-white transition-all hover:opacity-90';
 
-  const buttonSmallPrimaryClasses = `px-3 py-1.5 text-sm rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all`;
+  const buttonSmallPrimaryClasses = 'rounded-[var(--radius-md)] bg-[var(--action)] px-3 py-2 text-sm font-semibold text-white transition-all hover:bg-[var(--action-strong)]';
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className={`text-2xl font-bold ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
-        }`}>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">
           {t.title}
-        </h1>
+        </h2>
         <button
           onClick={openAddModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
+          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--action)] px-4 py-3 font-semibold text-white shadow-[0_14px_28px_rgba(31,157,115,0.22)] transition-all hover:bg-[var(--action-strong)]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -756,10 +751,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
       </div>
 
       {/* Search and Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className={`relative ${
-          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-        }`}>
+      <div className="mb-6 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_76%,transparent)] p-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="relative text-[var(--foreground)]">
           <input
             ref={barcodeInputRef}
             type="text"
@@ -772,9 +766,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             className={`${inputClasses} pl-10`}
           />
           <svg
-            className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 ${
+            className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted)] ${
               isRTL ? 'right-3' : 'left-3'
-            } ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+            }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -804,32 +798,25 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             ))}
           </select>
         </div>
-        <div className={`text-sm ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-        } flex items-center`}>
+        <div className="flex items-center text-sm text-[var(--muted)]">
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
           {t.barcodeScanHint}
         </div>
+        </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          theme === 'dark'
-            ? 'bg-red-900/20 border-red-800 text-red-300'
-            : 'bg-red-50 border-red-200 text-red-700'
-        }`}>
+        <div className="mb-6 rounded-[var(--radius-lg)] border border-[color:color-mix(in_srgb,var(--danger)_38%,transparent)] bg-[var(--danger-soft)] p-4 text-[var(--danger)]">
           {error}
         </div>
       )}
 
       {/* Products List */}
       {isLoading ? (
-        <div className={`text-center py-12 ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-        }`}>
+        <div className="py-12 text-center text-[var(--muted)]">
           <svg className="animate-spin h-8 w-8 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -837,9 +824,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
           Loading...
         </div>
       ) : paginatedProducts.length === 0 ? (
-        <div className={`text-center py-12 ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-        }`}>
+        <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_68%,transparent)] py-12 text-center text-[var(--muted)]">
           {t.noProducts}
         </div>
       ) : (
@@ -848,10 +833,10 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
             {paginatedProducts.map((product, index) => (
               <div
                 key={product.id}
-                className={`rounded-xl border transition-all ${
+                className={`rounded-[var(--radius-xl)] border transition-all ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                    : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
+                    ? 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_30%,var(--border)_70%)]'
+                    : 'border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] hover:border-[color:color-mix(in_srgb,var(--accent)_34%,var(--border)_66%)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]'
                 } ${!product.is_active ? 'opacity-60' : ''}`}
               >
                 {/* Product Card Header */}
@@ -859,41 +844,33 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className={`text-lg font-semibold truncate ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
-                        }`}>
+                        <h3 className="truncate text-lg font-semibold text-[var(--foreground)]">
                           {locale === 'ar' ? product.name_ar : product.name_en}
                         </h3>
                         {product.is_controlled && (
-                          <span className={`px-2 py-0.5 text-xs rounded-full ${
-                            theme === 'dark'
-                              ? 'bg-blue-900/30 text-blue-400'
-                              : 'bg-blue-100 text-blue-700'
-                          }`}>
+                          <span className="rounded-full bg-[var(--info-soft)] px-2 py-0.5 text-xs text-[var(--info)]">
                             {t.isControlledLabel}
                           </span>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-4 text-sm">
-                        <span className={`font-mono ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
+                        <span className="font-mono text-[var(--muted)]">
                           Barcode: {product.barcode}
                         </span>
                         {product.sku && (
-                          <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+                          <span className="text-[var(--muted)]">
                             SKU: {product.sku}
                           </span>
                         )}
-                        <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                        <span className="text-[var(--foreground)]">
                           Stock: {product.total_quantity}
                         </span>
                         {product.category && (
-                          <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+                          <span className="text-[var(--muted)]">
                             {locale === 'ar' ? product.category.name_ar : product.category.name_en}
                           </span>
                         )}
-                        <span className="font-semibold text-green-500">
+                        <span className="font-semibold text-[var(--action)]">
                           ${product.sale_price.toFixed(2)}
                         </span>
                       </div>
@@ -907,11 +884,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                       </button>
                       <button
                         onClick={() => openEditModal(product)}
-                        className={`p-2 rounded-lg transition-all ${
-                          theme === 'dark'
-                            ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-300'
-                            : 'hover:bg-gray-100 text-gray-600 hover:text-gray-700'
-                        }`}
+                        className="rounded-[var(--radius-md)] p-2 text-[var(--muted)] transition-all hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                         aria-label={t.editButton}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -920,11 +893,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                       </button>
                       <button
                         onClick={() => openDeleteModal(product)}
-                        className={`p-2 rounded-lg transition-all ${
-                          theme === 'dark'
-                            ? 'hover:bg-red-900/30 text-red-400 hover:text-red-300'
-                            : 'hover:bg-red-100 text-red-600 hover:text-red-700'
-                        }`}
+                        className="rounded-[var(--radius-md)] p-2 text-[var(--danger)] transition-all hover:bg-[var(--danger-soft)]"
                         aria-label={t.deleteButton}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -937,13 +906,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
 
                 {/* Batches Sub-section */}
                 {expandedProduct === product.id && (
-                  <div className={`border-t px-4 pb-4 ${
-                    theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-                  }`}>
+                  <div className="border-t border-[var(--border)] px-4 pb-4">
                     <div className="flex items-center justify-between mt-4 mb-3">
-                      <h4 className={`font-semibold ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}>
+                      <h4 className="font-semibold text-[var(--foreground)]">
                         {t.batchesSection}
                       </h4>
                       <button
@@ -957,35 +922,17 @@ export const ProductManager: React.FC<ProductManagerProps> = ({
                       </button>
                     </div>
                     {product.batches && product.batches.length > 0 ? (
-                      <div className={`overflow-x-auto rounded-lg border ${
-                        theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-                      }`}>
+                      <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_70%,transparent)]">
                         <table className="w-full text-sm">
-                          <thead className={
-                            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'
-                          }>
+                          <thead className="bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)]">
                             <tr>
-                              <th className={`px-4 py-3 text-left font-medium ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}>{t.batchNumber}</th>
-                              <th className={`px-4 py-3 text-left font-medium ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}>{t.batchCost}</th>
-                              <th className={`px-4 py-3 text-left font-medium ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}>{t.batchQuantity}</th>
-                              <th className={`px-4 py-3 text-left font-medium ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}>{t.batchExpiry}</th>
-                              <th className={`px-4 py-3 text-left font-medium ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}>Status</th>
-                              <th className={`px-4 py-3 text-left font-medium ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}>{t.fefoOrder}</th>
-                              <th className={`px-4 py-3 text-left font-medium ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}>{t.batchActions}</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchNumber}</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchCost}</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchQuantity}</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchExpiry}</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">Status</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.fefoOrder}</th>
+                              <th className="px-4 py-3 text-left font-medium text-[var(--foreground)]">{t.batchActions}</th>
                             </tr>
                           </thead>
                           <tbody>

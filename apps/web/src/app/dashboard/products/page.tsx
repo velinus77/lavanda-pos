@@ -1,31 +1,22 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Metadata } from 'next';
 import { useRouter } from 'next/navigation';
-import { getCachedUser, User } from '@/lib/auth';
+import { getCachedUser } from '@/lib/auth';
 import { useLocale } from '@/contexts/LocaleProvider';
 import { useTheme } from '@/contexts/ThemeProvider';
 import ProductManager from '@/components/inventory/ProductManager';
-
-// Note: Metadata for client components should be set in layout or via generateMetadata in server component
-// For client pages, we rely on the layout and dynamic title updates
 
 export default function ProductsPage() {
   const router = useRouter();
   const { locale } = useLocale();
   const { theme } = useTheme();
-  const [user, setUser] = useState<User | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isRTL = locale === 'ar';
-
   useEffect(() => {
     const cachedUser = getCachedUser();
-    setUser(cachedUser || null);
 
-    // Check role authorization - cashier should be redirected
     if (cachedUser) {
       if (cachedUser.role === 'cashier') {
         router.replace('/dashboard');
@@ -42,60 +33,54 @@ export default function ProductsPage() {
 
   if (isLoading || !isAuthorized) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {isRTL ? 'جاري التحميل...' : 'Loading...'}
-          </p>
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[var(--action)] border-t-transparent" />
+          <p className="text-[var(--muted)]">{locale === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>
         </div>
       </div>
     );
   }
 
-  const pageTitles = {
-    ar: {
-      main: 'المنتجات',
-      breadcrumb: 'الرئيسية / المنتجات',
-    },
-    en: {
-      main: 'Products',
-      breadcrumb: 'Home / Products',
-    },
-  };
-
-  const titles = pageTitles[locale];
+  const titles =
+    locale === 'ar'
+      ? {
+          overline: 'فهرس الأصناف',
+          main: 'المنتجات',
+          subtitle: 'راجع الأسعار والباركود والمخزون من نفس الواجهة الهادئة والواضحة.',
+          home: 'الرئيسية',
+        }
+      : {
+          overline: 'Catalog control',
+          main: 'Products',
+          subtitle: 'Manage pricing, barcodes, and stock-facing product data in the same calmer system.',
+          home: 'Home',
+        };
 
   return (
-    <div>
-      {/* Page header with breadcrumb */}
-      <div className="mb-6">
-        <nav className="text-sm text-gray-500 dark:text-gray-400 mb-2" aria-label="Breadcrumb">
-          <ol className="flex items-center space-x-2 rtl:space-x-reverse">
+    <div className="space-y-6">
+      <div className="rounded-[var(--radius-xl)] border border-[color:color-mix(in_srgb,var(--accent)_18%,transparent)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_10%,var(--card)_90%),color-mix(in_srgb,var(--surface)_86%,transparent))] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+        <nav className="mb-4 text-sm text-[var(--muted)]" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-2 rtl:flex-row-reverse">
             <li>
-              <a href="/dashboard" className="hover:text-gray-700 dark:hover:text-gray-300">
-                {locale === 'ar' ? 'الرئيسية' : 'Home'}
+              <a href="/dashboard" className="transition-colors hover:text-[var(--foreground)]">
+                {titles.home}
               </a>
             </li>
-            <li className="flex items-center">
-              <svg className="w-4 h-4 mx-2 rtl:rotate-180" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
-              <span className="text-gray-900 dark:text-white font-medium">{titles.main}</span>
-            </li>
+            <li className="text-[var(--accent)]">/</li>
+            <li className="font-medium text-[var(--foreground)]">{titles.main}</li>
           </ol>
         </nav>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{titles.main}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          {isRTL
-            ? 'إدارة المنتجات، الأسعار، والمخزون'
-            : 'Manage products, pricing, and inventory'}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
+          {titles.overline}
         </p>
+        <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">
+          {titles.main}
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">{titles.subtitle}</p>
       </div>
 
-      {/* Product Manager Component */}
       <ProductManager locale={locale} theme={theme} />
     </div>
   );
 }
-

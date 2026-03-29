@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCachedUser, User, getAuthToken } from '@/lib/auth';
+import { getCachedUser, getAuthToken } from '@/lib/auth';
 import { useLocale } from '@/contexts/LocaleProvider';
-import { useTheme } from '@/contexts/ThemeProvider';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -81,10 +80,8 @@ async function postCheckout(
 export default function POSPage() {
   const router = useRouter();
   const { locale } = useLocale();
-  const { theme } = useTheme();
   const isRTL = locale === 'ar';
 
-  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Search
@@ -106,7 +103,6 @@ export default function POSPage() {
   useEffect(() => {
     const cachedUser = getCachedUser();
     if (!cachedUser) { router.replace('/login'); return; }
-    setUser(cachedUser);
     setIsLoading(false);
   }, [router]);
 
@@ -177,7 +173,6 @@ export default function POSPage() {
 
   // ── Totals ──
   const subtotal = cart.reduce((sum, i) => sum + i.subtotal, 0);
-  const tax = 0; // cash MVP — tax handled server-side
   const total = subtotal;
 
   // ── Checkout ──
@@ -248,21 +243,22 @@ export default function POSPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Header */}
-      <div className="mb-6">
-        <nav className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-          <ol className="flex items-center space-x-2 rtl:space-x-reverse">
-            <li><a href="/dashboard" className="hover:text-gray-700 dark:hover:text-gray-300">{isRTL ? 'الرئيسية' : 'Home'}</a></li>
-            <li className="flex items-center">
-              <svg className="w-4 h-4 mx-2 rtl:rotate-180" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
-              <span className="text-gray-900 dark:text-white font-medium">{t.title}</span>
-            </li>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="space-y-6">
+      <div className="rounded-[var(--radius-xl)] border border-[color:color-mix(in_srgb,var(--accent)_18%,transparent)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_10%,var(--card)_90%),color-mix(in_srgb,var(--surface)_86%,transparent))] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+        <nav className="mb-4 text-sm text-[var(--muted)]">
+          <ol className="flex items-center gap-2 rtl:flex-row-reverse">
+            <li><a href="/dashboard" className="transition-colors hover:text-[var(--foreground)]">{isRTL ? 'الرئيسية' : 'Home'}</a></li>
+            <li className="text-[var(--accent)]">/</li>
+            <li className="font-medium text-[var(--foreground)]">{t.title}</li>
           </ol>
         </nav>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.title}</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
+          {isRTL ? 'نقطة البيع' : 'Front desk flow'}
+        </p>
+        <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.04em] text-[var(--foreground)]">{t.title}</h1>
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+          {isRTL ? 'ابحث بسرعة، راجع السلة، وأغلق البيع في نفس مساحة العمل.' : 'Search products, review the basket, and close the sale from one calmer workspace.'}
+        </p>
       </div>
 
       {/* Receipt success modal */}
@@ -315,17 +311,17 @@ export default function POSPage() {
       )}
 
       {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
         {/* Left: Product search */}
         <div className="lg:col-span-2 space-y-4">
           {/* Search input */}
-          <div className="relative">
+          <div className="relative rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_76%,transparent)] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
             <div className="absolute inset-y-0 left-3 rtl:left-auto rtl:right-3 flex items-center pointer-events-none">
               {isSearching ? (
-                <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--action)] border-t-transparent" />
               ) : (
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               )}
@@ -347,13 +343,13 @@ export default function POSPage() {
               }}
               placeholder={t.searchPlaceholder}
               autoFocus
-              className="w-full pl-10 rtl:pl-4 rtl:pr-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] py-3 pl-10 pr-4 text-sm text-[var(--foreground)] outline-none transition-all placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:ring-2 focus:ring-[color:var(--action)]/15 rtl:pl-4 rtl:pr-10"
             />
           </div>
 
           {/* Search results */}
           {searchResults.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+            <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
               {searchResults.map((product) => (
                 <button
                   key={product.id}
@@ -399,7 +395,7 @@ export default function POSPage() {
         </div>
 
         {/* Right: Cart */}
-        <div className="flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden max-h-[calc(100vh-12rem)]">
+        <div className="flex max-h-[calc(100vh-12rem)] flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--card)_96%,transparent)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
           {/* Cart header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
